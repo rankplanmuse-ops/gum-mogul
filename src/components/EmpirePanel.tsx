@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { GameState } from "@/types/game";
-import { formatCurrency, MACHINE_COST, CITIES, machineCapOf, dailyRent, totalMachines, RESTOCK_LEVELS, hasUpgrade } from "@/lib/gameLogic";
+import { formatCurrency, MACHINE_COST, CITIES, machineCapOf, dailyRent, totalMachines, RESTOCK_LEVELS, hasUpgrade, MARKETING_CHANNELS } from "@/lib/gameLogic";
 import { Lock, Plus, Sparkles, Megaphone } from "lucide-react";
 
 interface Props {
@@ -12,9 +12,10 @@ interface Props {
   onBuyUpgrade: (upgradeId: string) => void;
   onMarketingChange: (spend: number) => void;
   onRestockLevelChange: (levelId: string) => void;
+  onBuyMarketing: (channelId: string) => void;
 }
 
-export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUpgrade, onMarketingChange, onRestockLevelChange }: Props) => {
+export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUpgrade, onMarketingChange, onRestockLevelChange, onBuyMarketing }: Props) => {
   return (
     <div className="space-y-6">
       <div>
@@ -64,6 +65,28 @@ export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUp
             <p className="text-3xl font-black mt-3">{formatCurrency(gameState.marketingSpend)}<span className="text-base text-muted-foreground">/day</span></p>
             <Slider value={[gameState.marketingSpend]} min={0} max={25} step={1} onValueChange={([v]) => onMarketingChange(v)} className="mt-3" />
             <p className="text-xs font-black text-fuchsia-700 mt-2">Demand boost right now: +{Math.round(gameState.marketingSpend * 1.8)}%</p>
+            <div className="border-t-2 border-dashed border-fuchsia-200 mt-4 pt-3">
+              <p className="text-sm font-black">📣 Campaigns <span className="text-xs font-bold text-muted-foreground">(one-off, stack with everything)</span></p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                {MARKETING_CHANNELS.map((c) => {
+                  const daysLeft = gameState.promoDays?.[c.id] ?? 0;
+                  return (
+                    <div key={c.id} className="bg-white/70 rounded-2xl border-2 p-3">
+                      <p className="font-black text-sm">{c.emoji} {c.name}</p>
+                      <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">{c.blurb}</p>
+                      <p className="text-[11px] font-black text-fuchsia-700 mt-1">+{Math.round((c.factor - 1) * 100)}% demand · {c.days} days</p>
+                      {daysLeft > 0 ? (
+                        <p className="font-black text-accent text-sm mt-2">✅ Live, {daysLeft} day{daysLeft === 1 ? "" : "s"} left</p>
+                      ) : (
+                        <Button onClick={() => onBuyMarketing(c.id)} disabled={gameState.cash < c.cost} className="w-full rounded-full font-black mt-2 h-9">
+                          Launch {formatCurrency(c.cost)}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </Card>
       </div>
 

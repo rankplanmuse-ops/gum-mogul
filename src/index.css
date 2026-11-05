@@ -120,6 +120,16 @@
   0%, 100% { filter: brightness(1); }
   50% { filter: brightness(1.5) drop-shadow(0 0 12px rgba(250, 204, 21, .9)); }
 }
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ticker-track {
+  display: inline-block;
+  white-space: nowrap;
+  padding-left: 0.5rem;
+  animation: ticker-scroll 18s linear infinite;
+}
 .animate-floaty { animation: floaty 4s ease-in-out infinite; }
 .animate-pop { animation: pop-in .35s cubic-bezier(.2, 1.6, .4, 1) both; }
 .animate-wiggle-hover:hover { animation: wiggle .4s ease-in-out; }

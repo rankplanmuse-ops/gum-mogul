@@ -21,7 +21,10 @@ locations, survive random events, and stack sats through a built-in
   Opening the Airport unlocks Neon Bay: Ferry Pier, Neon Night Market,
   Tech District, and the Gum Mogul Kiosk, your own shop with room for
   5 machines. Plus purchasable machines, 7 gum flavours that unlock
-  at revenue milestones, and 4 upgrades.
+  at revenue milestones, and 6 upgrades (including Digital Displays
+  with a live price ticker, and Extra Large Jars). Marketing runs from
+  a daily slider plus one-off campaigns: Flyer Round, Social Blast,
+  Local Radio Spot, and the Lightning zap promo.
   Bulk supplier discounts (25+ gums 5% off, 50+ 10%, 100+ 15%) and a
   Restock Bot with four fill levels (Lean, Standard, Loaded, Max Out)
   reward players who plan their working capital.
@@ -44,8 +47,9 @@ locations, survive random events, and stack sats through a built-in
   Built for phones too: a one-tap Refill jars button sits under Next
   Day, and on mobile both stick to the bottom of the screen.
 - **Original 8-bit soundtrack:** a Game Boy style chiptune (square lead,
-  triangle bass, noise hats) synthesized live with WebAudio from the
-  speaker button. No audio files, nothing sampled: the loop is code.
+  triangle bass, noise hats) rendered from code to a tiny WAV in your
+  browser and looped from the speaker button. No audio files ship
+  with the game, nothing sampled: the loop is code.
 
 ## Run it
 

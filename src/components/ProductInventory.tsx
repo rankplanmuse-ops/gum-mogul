@@ -32,7 +32,7 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
       </div>
       <p className="text-sm font-semibold text-muted-foreground -mt-2">Set your price with the slider. Cheaper sells more, pricier earns more per gum, until customers walk away. Forecast shows expected sales tomorrow. <strong className="text-accent">Bulk discounts: 25+ gums 5% off, 50+ 10% off, 100+ 15% off</strong>, on cash and sats orders alike.</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {gameState.products.map((p) => {
           if (!p.unlocked) {
             return (
@@ -62,7 +62,7 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
                   <div className={`gumball w-14 h-14 bg-gradient-to-br ${p.color} animate-wiggle-hover`}>{p.emoji}</div>
                   <div>
                     <h3 className="font-black leading-tight">{p.name}</h3>
-                    <p className="text-xs font-bold text-muted-foreground">cost {formatCurrency(p.costPrice)} · margin {formatCurrency(margin)}</p>
+                    <p className="text-xs font-bold text-muted-foreground">cost {formatCurrency(p.costPrice)} · unit margin <span className={margin / p.sellPrice >= 0.5 ? "text-accent" : margin / p.sellPrice >= 0.25 ? "text-amber-600" : "text-rose-600"}>{formatCurrency(margin)} ({Math.round((margin / p.sellPrice) * 100)}%)</span></p>
                   </div>
                 </div>
                 <div className={`text-right ${low ? "text-loss" : "text-primary"}`}>

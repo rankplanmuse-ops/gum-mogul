@@ -12,7 +12,9 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
+      {/* Toasts live at the TOP: bottom toasts would cover the sticky
+          mobile action bar (Next Day / Refill) and the music button. */}
+      <Sonner position="top-center" richColors closeButton />
       {/* HashRouter on purpose: the game is hosted from subpaths
           (e.g. username.github.io/gum-mogul/) where BrowserRouter would
           match no route and render the 404 page. Hash routing works on

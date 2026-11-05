@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { GameState } from "@/types/game";
 import {
   freshState, processDayEnd, purchaseStock, buyMachine, unlockLocation, buyUpgrade,
-  zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock, refillLines, refillJars,
+  zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock, refillLines, refillJars, buyMarketing,
   stockCapacity, totalMachines, hasUpgrade, SAVE_KEY, ActionResult,
 } from "@/lib/gameLogic";
 import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX } from "lucide-react";
@@ -30,6 +30,13 @@ const loadSave = (): GameState => {
           merged.locations = freshState().locations.map((fresh) => {
             const saved = parsed.locations.find((l: { id: string }) => l.id === fresh.id);
             return saved ? { ...fresh, unlocked: !!saved.unlocked, machines: saved.machines ?? fresh.machines } : fresh;
+          });
+        }
+        // Same for upgrades added later (Digital Displays, Extra Large Jars...).
+        if (Array.isArray(parsed.upgrades)) {
+          merged.upgrades = freshState().upgrades.map((fresh) => {
+            const saved = parsed.upgrades.find((u: { id: string }) => u.id === fresh.id);
+            return saved ? { ...fresh, owned: !!saved.owned } : fresh;
           });
         }
         return merged;
@@ -63,9 +70,15 @@ const Index = () => {
     return () => window.removeEventListener("pointerdown", kick);
   }, []);
 
+  useEffect(() => {
+    chiptune.onBlocked = () => { setMusicOn(false); toast.error("🎵 The browser blocked the music. Tap the speaker again."); };
+    return () => { chiptune.onBlocked = null; };
+  }, []);
+
   const toggleMusic = () => {
     const nowOn = chiptune.toggle();
     setMusicOn(nowOn);
+    if (nowOn) toast.success("🎵 8-bit soundtrack on");
     try { localStorage.setItem(MUSIC_PREF_KEY, nowOn ? "on" : "off"); } catch { /* ignore */ }
   };
   const stateRef = useRef(gameState);
@@ -186,7 +199,7 @@ const Index = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <div className="flex flex-col gap-4">
-            <VendingMachine gumCount={totalStock(gameState)} capacity={stockCapacity(gameState)} machines={totalMachines(gameState)} />
+            <VendingMachine gumCount={totalStock(gameState)} capacity={stockCapacity(gameState)} machines={totalMachines(gameState)} tickerText={hasUpgrade(gameState, "displays") ? gameState.products.filter((p) => p.unlocked).map((p) => `${p.emoji} ${p.name.toUpperCase()} $${p.sellPrice.toFixed(2)}`).join(" · ") + " · PAY WITH LIGHTNING ⚡ NO CARD FEES" : undefined} />
             <div className="order-first lg:order-none space-y-3">
               <div className="flex gap-3">
                 <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-1 h-14 text-lg rounded-full font-black gap-2 shadow-lg">
@@ -205,20 +218,12 @@ const Index = () => {
             </div>
             <CostBreakdownPanel costs={breakdownCosts} title={gameState.lastDay ? `Yesterday (Day ${gameState.day - 1}) in numbers` : "Today, forecast"} lnShare={gameState.lastDay ? gameState.lastDay.lnShare : hasUpgrade(gameState, "ln-terminal") ? 0.45 : 0} />
           </div>
-          <LightningWalletPanel
+          <ProductInventory
             gameState={gameState}
-            onReceive={(amount, label) => { setGameState((s) => receiveSats(s, amount, label)); toast.success(`⚡ +${amount.toLocaleString()} sats settled`); }}
-            onZapPromo={() => apply(zapPromo(gameState))}
-            onSellSats={(amount) => apply(sellSats(gameState, amount))}
-            onRescueLoan={() => apply(takeRescueLoan(gameState))}
+            onPurchase={(id, qty, method) => apply(purchaseStock(gameState, id, qty, method))}
+            onPriceChange={(id, price) => setGameState((s) => ({ ...s, products: s.products.map((p) => (p.id === id ? { ...p, sellPrice: price } : p)) }))}
           />
         </div>
-
-        <ProductInventory
-          gameState={gameState}
-          onPurchase={(id, qty, method) => apply(purchaseStock(gameState, id, qty, method))}
-          onPriceChange={(id, price) => setGameState((s) => ({ ...s, products: s.products.map((p) => (p.id === id ? { ...p, sellPrice: price } : p)) }))}
-        />
 
         <EmpirePanel
           gameState={gameState}
@@ -227,6 +232,15 @@ const Index = () => {
           onBuyUpgrade={(id) => apply(buyUpgrade(gameState, id))}
           onMarketingChange={(spend) => setGameState((s) => ({ ...s, marketingSpend: spend }))}
           onRestockLevelChange={(levelId) => { setGameState((s) => ({ ...s, restockLevel: levelId })); toast.success(`Restock Bot set to ${levelId}`); }}
+          onBuyMarketing={(channelId) => apply(buyMarketing(gameState, channelId))}
+        />
+
+        <LightningWalletPanel
+          gameState={gameState}
+          onReceive={(amount, label) => { setGameState((s) => receiveSats(s, amount, label)); toast.success(`⚡ +${amount.toLocaleString()} sats settled`); }}
+          onZapPromo={() => apply(zapPromo(gameState))}
+          onSellSats={(amount) => apply(sellSats(gameState, amount))}
+          onRescueLoan={() => apply(takeRescueLoan(gameState))}
         />
 
         <InsightsPanel gameState={gameState} />

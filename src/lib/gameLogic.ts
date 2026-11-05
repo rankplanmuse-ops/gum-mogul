@@ -31,6 +31,27 @@ export const RESTOCK_LEVELS: RestockLevel[] = [
   { id: "maxout", name: "Max Out", emoji: "🚀", blurb: "Fill every jar to capacity. Never miss a sale, heavy cash tied up.", factor: 3 },
 ];
 
+export interface MarketingChannel {
+  id: string;
+  name: string;
+  emoji: string;
+  blurb: string;
+  cost: number;
+  days: number;
+  factor: number; // demand multiplier while active
+}
+
+// One-off marketing campaigns, on top of the daily marketing slider and the
+// Lightning zap promo. Each runs for a few days, then ends. They stack.
+export const MARKETING_CHANNELS: MarketingChannel[] = [
+  { id: "flyers", name: "Flyer Round", emoji: "📄", blurb: "Paper every noticeboard and bus stop in town.", cost: 25, days: 3, factor: 1.15 },
+  { id: "social", name: "Social Blast", emoji: "📱", blurb: "A week of bubbly posts and one very chewable video.", cost: 60, days: 3, factor: 1.25 },
+  { id: "radio", name: "Local Radio Spot", emoji: "📻", blurb: "Drive-time jingle. Nobody can unhear the pop.", cost: 150, days: 2, factor: 1.4 },
+];
+
+export const promoFactor = (s: GameState): number =>
+  MARKETING_CHANNELS.reduce((f, c) => ((s.promoDays?.[c.id] ?? 0) > 0 ? f * c.factor : f), 1);
+
 // Bulk buying: the supplier rewards bigger orders. Applies to cash and sats
 // payments; the Lightning 8% comes on top when paying in sats.
 export const BULK_TIERS: { minQty: number; discount: number }[] = [
@@ -83,7 +104,9 @@ export const machineCapOf = (loc: Location): number => loc.machineCap ?? MAX_MAC
 export const INITIAL_UPGRADES: Upgrade[] = [
   { id: "ln-terminal", name: "Lightning Terminal", emoji: "⚡", blurb: "Accept Lightning in every machine. 45% of customers pay in sats: instant, no 2.9% card fee. Unlocks Lightning supplier payments, zap promos and rescue loans.", cost: 150, owned: false },
   { id: "big-jar", name: "Big Jar", emoji: "🫙", blurb: "+60% stock capacity in every machine.", cost: 120, owned: false },
+  { id: "xl-jars", name: "Extra Large Jars", emoji: "🏺", blurb: "Cavernous jars: x2.5 stock capacity in every machine. Stacks with Big Jar (x4 total). Built for Max Out bots and kiosk life.", cost: 600, owned: false },
   { id: "neon", name: "Neon Sign", emoji: "💡", blurb: "+15% demand everywhere, forever. Very bubbly.", cost: 200, owned: false },
+  { id: "displays", name: "Digital Displays", emoji: "📺", blurb: "Animated screens on every machine loop your flavours in glorious 8-bit, with a live price ticker. +12% demand everywhere.", cost: 500, owned: false },
   { id: "auto-restock", name: "Restock Bot", emoji: "🤖", blurb: "Every morning the bot restocks for you. Four fill levels: Lean, Standard, Loaded, Max Out. Set it and let Auto Play run.", cost: 350, owned: false },
 ];
 
@@ -141,6 +164,7 @@ export const freshState = (): GameState => ({
   locations: INITIAL_LOCATIONS.map((l) => ({ ...l })),
   upgrades: INITIAL_UPGRADES.map((u) => ({ ...u })),
   marketingSpend: 3,
+  promoDays: {},
   restockLevel: "standard",
   taxRate: 0.15,
   depreciationRate: 0.01,
@@ -178,7 +202,7 @@ export const dailyRent = (s: GameState) =>
   s.locations.reduce((n, l) => n + l.machines * l.rentPerMachine, 0);
 
 export const stockCapacity = (s: GameState) =>
-  Math.round(totalMachines(s) * 150 * (hasUpgrade(s, "big-jar") ? 1.6 : 1));
+  Math.round(totalMachines(s) * 150 * (hasUpgrade(s, "big-jar") ? 1.6 : 1) * (hasUpgrade(s, "xl-jars") ? 2.5 : 1));
 
 export const totalStock = (s: GameState) =>
   s.products.reduce((n, p) => n + p.stock, 0);
@@ -200,9 +224,10 @@ export const forecastDemand = (s: GameState, p: Product): number => {
   const marketing = 1 + s.marketingSpend * 0.018;
   const reputation = 0.7 + (s.reputation / 100) * 0.6;
   const neon = hasUpgrade(s, "neon") ? 1.15 : 1;
+  const displays = hasUpgrade(s, "displays") ? 1.12 : 1;
   const event = s.pendingEvent?.demandFactor ?? 1;
   const zap = s.zapBoostDays > 0 ? 1.3 : 1;
-  return p.baseDemand * trafficUnits(s) * priceFactor(p) * marketing * reputation * neon * event * zap;
+  return p.baseDemand * trafficUnits(s) * priceFactor(p) * marketing * reputation * neon * displays * event * zap * promoFactor(s);
 };
 
 const pushLog = (s: GameState, icon: string, text: string, kind: GameState["log"][number]["kind"]) => {
@@ -260,7 +285,7 @@ export const purchaseStock = (
   const product = state.products.find((p) => p.id === productId);
   if (!product || quantity <= 0) return { state, ok: false, message: "Pick a quantity first" };
   if (totalStock(state) + quantity > stockCapacity(state))
-    return { state, ok: false, message: `Jar is full. Capacity is ${stockCapacity(state)} units (Big Jar upgrade helps)` };
+    return { state, ok: false, message: `Jar is full. Capacity is ${stockCapacity(state)} units (jar upgrades help)` };
 
   const bulk = bulkDiscountFor(quantity);
   const costUsd = product.costPrice * quantity * (1 - bulk);
@@ -375,6 +400,17 @@ export const sellSats = (state: GameState, amount: number): ActionResult => {
   return { state: s, ok: true, message: `Sold ${amount.toLocaleString()} sats` };
 };
 
+export const buyMarketing = (state: GameState, channelId: string): ActionResult => {
+  const channel = MARKETING_CHANNELS.find((c) => c.id === channelId);
+  if (!channel) return { state, ok: false, message: "Unknown campaign" };
+  if (state.cash < channel.cost) return { state, ok: false, message: `${channel.name} costs $${channel.cost}` };
+  const s = { ...state, promoDays: { ...(state.promoDays ?? {}) }, log: [...state.log] };
+  s.cash -= channel.cost;
+  s.promoDays[channel.id] = Math.max(s.promoDays[channel.id] ?? 0, channel.days);
+  pushLog(s, channel.emoji, `${channel.name} launched: +${Math.round((channel.factor - 1) * 100)}% demand for ${channel.days} days. ${channel.blurb}`, "info");
+  return { state: s, ok: true, message: `${channel.name} live for ${channel.days} days` };
+};
+
 // ---- Manual refill -------------------------------------------------------------------
 // One shared planner for the Restock Bot and the manual "Refill jars" button:
 // tops every unlocked gum up to forecast x fill level, jar room and cash
@@ -430,6 +466,7 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
     log: [...input.log],
     lnTx: [...input.lnTx],
     achievements: [...input.achievements],
+    promoDays: { ...(input.promoDays ?? {}) },
   };
   const finishedDay = s.day;
 
@@ -516,6 +553,9 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   if (s.pendingEvent) pushLog(s, "🔮", `Tomorrow: ${s.pendingEvent.icon} ${s.pendingEvent.title} (demand x${s.pendingEvent.demandFactor})`, "event");
 
   if (s.zapBoostDays > 0) s.zapBoostDays -= 1;
+  for (const id of Object.keys(s.promoDays)) {
+    if (s.promoDays[id] > 0) s.promoDays[id] -= 1;
+  }
 
   s.day += 1;
   if (s.cash < 0) {

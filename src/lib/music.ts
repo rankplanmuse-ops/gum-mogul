@@ -1,13 +1,14 @@
-// Gum Mogul chiptune engine: an original 8-bit loop synthesized live with
-// WebAudio. No audio files, no samples, nothing to license: the melody was
-// written for this game and is plain code, MIT like the rest of the project.
+// Gum Mogul chiptune: an original 8-bit loop, written for this game.
 //
-// Square wave lead + triangle bass + noise hats, Game Boy style (the
-// original hardware had exactly these channels). Starts only on a user
-// gesture (the speaker toggle), per browser autoplay rules.
+// Playback v2 (why: v1 used a live WebAudio scheduler and stayed silent in
+// some mobile webviews). Now the tune is rendered to a tiny WAV in code at
+// first use (square lead, triangle bass, noise hats, Game Boy style) and
+// played through a plain looping audio element, which every browser and
+// webview handles reliably from a tap. No audio files ship with the game;
+// the loop below IS the song, MIT like everything else here.
 
 const BPM = 138;
-const STEP_SECONDS = 60 / BPM / 2; // eighth notes
+const SAMPLE_RATE = 22050;
 
 // Lead melody, MIDI note numbers, 0 = rest. 32 eighth notes = 4 bars.
 const LEAD = [
@@ -26,93 +27,96 @@ const BASS = [
 
 const midiHz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
-class Chiptune {
-  private ctx: AudioContext | null = null;
-  private master: GainNode | null = null;
-  private timer: number | null = null;
-  private step = 0;
-  private nextTime = 0;
-  playing = false;
+const renderLoopUrl = (): string => {
+  const stepDur = 60 / BPM / 2;
+  const sps = Math.round(SAMPLE_RATE * stepDur);
+  const total = sps * LEAD.length;
+  const buf = new Float32Array(total);
+  let seed = 22222;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
 
-  private ensureCtx() {
-    if (!this.ctx) {
-      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      this.ctx = new AC();
-      this.master = this.ctx.createGain();
-      this.master.gain.value = 0.14;
-      this.master.connect(this.ctx.destination);
+  const addTone = (start: number, freq: number, dur: number, square: boolean, vol: number) => {
+    for (let i = 0; i < dur; i++) {
+      const idx = start + i;
+      if (idx >= total) break;
+      const phase = (i / SAMPLE_RATE * freq) % 1;
+      const env = Math.max(0, 1 - i / dur);
+      const v = square ? (phase < 0.5 ? 1 : -1) : phase < 0.5 ? phase * 4 - 1 : 3 - phase * 4;
+      buf[idx] += v * vol * (0.25 + 0.75 * env);
     }
-    if (this.ctx.state === "suspended") void this.ctx.resume();
+  };
+  const addHat = (start: number, vol: number) => {
+    const n = Math.floor(SAMPLE_RATE * 0.03);
+    for (let i = 0; i < n; i++) {
+      const idx = start + i;
+      if (idx >= total) break;
+      buf[idx] += (rnd() * 2 - 1) * vol * (1 - i / n);
+    }
+  };
+
+  for (let step = 0; step < LEAD.length; step++) {
+    const at = step * sps;
+    if (LEAD[step]) addTone(at, midiHz(LEAD[step]), Math.floor(sps * 0.92), true, 0.3);
+    if (BASS[step]) addTone(at, midiHz(BASS[step]), Math.floor(sps * 0.95), false, 0.42);
+    if (step % 2 === 1) addHat(at, 0.1);
+    if (step % 8 === 4) addHat(at, 0.16);
+    if (step === 30) addTone(at, midiHz(96), Math.floor(SAMPLE_RATE * 0.09), true, 0.15);
   }
 
-  private tone(freq: number, at: number, dur: number, type: OscillatorType, vol: number, dutySlide = 0) {
-    if (!this.ctx || !this.master) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, at);
-    if (dutySlide) osc.frequency.exponentialRampToValueAtTime(Math.max(30, freq + dutySlide), at + dur);
-    gain.gain.setValueAtTime(vol, at);
-    gain.gain.exponentialRampToValueAtTime(0.001, at + dur);
-    osc.connect(gain).connect(this.master);
-    osc.start(at);
-    osc.stop(at + dur + 0.02);
-  }
+  let peak = 0;
+  for (const v of buf) peak = Math.max(peak, Math.abs(v));
+  const gain = 0.85 / Math.max(peak, 0.001);
 
-  private hat(at: number, vol: number) {
-    if (!this.ctx || !this.master) return;
-    const len = Math.floor(this.ctx.sampleRate * 0.03);
-    const buffer = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-    const src = this.ctx.createBufferSource();
-    src.buffer = buffer;
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = "highpass";
-    filter.frequency.value = 7000;
-    const gain = this.ctx.createGain();
-    gain.gain.value = vol;
-    src.connect(filter).connect(gain).connect(this.master);
-    src.start(at);
+  const bytes = new Uint8Array(44 + total * 2);
+  const view = new DataView(bytes.buffer);
+  const writeStr = (off: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + total * 2, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, SAMPLE_RATE, true);
+  view.setUint32(28, SAMPLE_RATE * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, "data");
+  view.setUint32(40, total * 2, true);
+  for (let i = 0; i < total; i++) {
+    const v = Math.max(-1, Math.min(1, buf[i] * gain));
+    view.setInt16(44 + i * 2, Math.round(v * 32767), true);
   }
+  return URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+};
 
-  private scheduleStep(step: number, at: number) {
-    const lead = LEAD[step % LEAD.length];
-    const bass = BASS[step % BASS.length];
-    if (lead) this.tone(midiHz(lead), at, STEP_SECONDS * 0.92, "square", 0.5);
-    if (bass) this.tone(midiHz(bass), at, STEP_SECONDS * 0.95, "triangle", 0.8);
-    if (step % 2 === 1) this.hat(at, 0.12);
-    if (step % 8 === 4) this.hat(at, 0.2);
-    // a little sparkle arpeggio at the end of each loop
-    if (step % 32 === 30) this.tone(midiHz(96), at, 0.09, "square", 0.25, -600);
+class Chiptune {
+  private audio: HTMLAudioElement | null = null;
+  playing = false;
+  onBlocked: (() => void) | null = null;
+
+  private ensureAudio() {
+    if (!this.audio) {
+      this.audio = new Audio(renderLoopUrl());
+      this.audio.loop = true;
+      this.audio.volume = 0.55;
+      this.audio.preload = "auto";
+    }
+    return this.audio;
   }
 
   start() {
-    if (this.playing) return;
-    this.ensureCtx();
-    if (!this.ctx) return;
+    const audio = this.ensureAudio();
     this.playing = true;
-    this.step = 0;
-    this.nextTime = this.ctx.currentTime + 0.06;
-    const tick = () => {
-      if (!this.ctx || !this.playing) return;
-      while (this.nextTime < this.ctx.currentTime + 0.14) {
-        this.scheduleStep(this.step, this.nextTime);
-        this.nextTime += STEP_SECONDS;
-        this.step++;
-      }
-    };
-    tick();
-    this.timer = window.setInterval(tick, 27);
+    audio.play().catch(() => {
+      this.playing = false;
+      if (this.onBlocked) this.onBlocked();
+    });
   }
 
   stop() {
     this.playing = false;
-    if (this.timer !== null) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    if (this.ctx) void this.ctx.suspend();
+    if (this.audio) this.audio.pause();
   }
 
   toggle(): boolean {

@@ -93,6 +93,7 @@ export interface GameState {
   locations: Location[];
   upgrades: Upgrade[];
   marketingSpend: number;
+  promoDays: Record<string, number>; // marketing channel id -> days of boost left
   restockLevel: string; // id into RESTOCK_LEVELS, used by the Restock Bot
   taxRate: number;
   depreciationRate: number;
