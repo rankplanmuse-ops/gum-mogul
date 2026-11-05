@@ -22,14 +22,14 @@ export const FinancialDashboard = ({ gameState, dailyProfit }: Props) => {
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((st) => (
-          <Card key={st.label} className="bubbly-card p-5 hover:-translate-y-1 transition-transform">
-            <div className="flex items-center justify-between">
-              <div>
+          <Card key={st.label} className="bubbly-card p-4 sm:p-5 hover:-translate-y-1 transition-transform overflow-hidden">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{st.label}</p>
-                <p className={`text-2xl font-black ${st.cls}`}>{st.value}</p>
+                <p className={`text-lg sm:text-2xl font-black tabular-nums tracking-tight leading-tight break-words ${st.cls}`}>{st.value}</p>
               </div>
-              <div className={`p-3 rounded-full ${st.bg}`}>
-                <st.icon className="h-6 w-6" />
+              <div className={`p-2.5 sm:p-3 rounded-full shrink-0 ${st.bg}`}>
+                <st.icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
             </div>
           </Card>
@@ -41,7 +41,7 @@ export const FinancialDashboard = ({ gameState, dailyProfit }: Props) => {
             <Crown className="h-8 w-8 animate-floaty" />
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-white/80">Road to Gum Mogul</p>
-              <p className="text-2xl font-black">Net worth {formatCurrency(worth)} <span className="text-white/70 text-base font-bold">of {formatCurrency(MOGUL_NET_WORTH)}</span></p>
+              <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tight">Net worth {formatCurrency(worth)} <span className="text-white/70 text-base font-bold">of {formatCurrency(MOGUL_NET_WORTH)}</span></p>
             </div>
           </div>
           <p className="text-sm font-bold bg-white/25 rounded-full px-3 py-1">

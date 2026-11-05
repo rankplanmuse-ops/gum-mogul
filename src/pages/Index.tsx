@@ -189,11 +189,15 @@ const Index = () => {
           </div>
         )}
 
-        {gameState.pendingEvent && (
-          <div className="bg-white/85 backdrop-blur rounded-full py-2.5 px-6 font-bold text-center shadow animate-pop">
-            🔮 Tomorrow: {gameState.pendingEvent.icon} <strong>{gameState.pendingEvent.title}</strong> · demand x{gameState.pendingEvent.demandFactor}. {gameState.pendingEvent.text}
-          </div>
-        )}
+        {/* Fixed-height news slot: always rendered, so the daily event
+            headline never pushes the page around when it appears. */}
+        <div className="bg-white/85 backdrop-blur rounded-3xl sm:rounded-full py-2.5 px-6 font-bold text-center shadow min-h-[3.25rem] flex items-center justify-center">
+          {gameState.pendingEvent ? (
+            <p>🔮 Tomorrow: {gameState.pendingEvent.icon} <strong>{gameState.pendingEvent.title}</strong> · demand x{gameState.pendingEvent.demandFactor}. {gameState.pendingEvent.text}</p>
+          ) : (
+            <p className="text-muted-foreground">🗞️ Tomorrow: a quiet day on the gum beat. No surprises forecast.</p>
+          )}
+        </div>
 
         <FinancialDashboard gameState={gameState} dailyProfit={costs.netProfit} />
 
