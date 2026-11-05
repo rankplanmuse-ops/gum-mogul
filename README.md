@@ -18,6 +18,9 @@ locations, survive random events, and stack sats through a built-in
 - **An empire, not one machine:** 5 locations (Corner Shop, School Gates,
   Arcade Alley, Mega Mall, Airport Terminal), purchasable machines,
   7 gum flavours that unlock at revenue milestones, and 4 upgrades.
+  Bulk supplier discounts (25+ gums 5% off, 50+ 10%, 100+ 15%) and a
+  Restock Bot with four fill levels (Lean, Standard, Loaded, Max Out)
+  reward players who plan their working capital.
 - **A living market:** reputation, daily random events (viral videos,
   heatwaves, rival machines), stockouts that cost you customers, and a
   demand forecast for every product.
@@ -34,6 +37,9 @@ locations, survive random events, and stack sats through a built-in
     1,000 sats = $1 teaching rate.
 - **Meta game:** 14 achievements, revenue and profit charts, an empire
   diary, auto-save to your browser, and auto-play for idle moguls.
+- **Original 8-bit soundtrack:** a Game Boy style chiptune (square lead,
+  triangle bass, noise hats) synthesized live with WebAudio from the
+  speaker button. No audio files, nothing sampled: the loop is code.
 
 ## Run it
 

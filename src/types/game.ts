@@ -90,6 +90,7 @@ export interface GameState {
   locations: Location[];
   upgrades: Upgrade[];
   marketingSpend: number;
+  restockLevel: string; // id into RESTOCK_LEVELS, used by the Restock Bot
   taxRate: number;
   depreciationRate: number;
   reputation: number;

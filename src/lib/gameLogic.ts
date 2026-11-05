@@ -16,6 +16,34 @@ export const MOGUL_NET_WORTH = 25000;
 export const CARD_FEE_RATE = 0.029; // what card sales cost you
 export const LN_CUSTOMER_SHARE = 0.45; // share of sales paid over Lightning once you own a terminal
 export const LN_SUPPLIER_DISCOUNT = 0.08; // paying suppliers over Lightning is 8% cheaper
+export interface RestockLevel {
+  id: string;
+  name: string;
+  emoji: string;
+  blurb: string;
+  factor: number; // fill target = demand forecast x factor
+}
+
+export const RESTOCK_LEVELS: RestockLevel[] = [
+  { id: "lean", name: "Lean", emoji: "🥗", blurb: "75% of forecast. Cheap to run, some empty slots.", factor: 0.75 },
+  { id: "standard", name: "Standard", emoji: "⚖️", blurb: "110% of forecast. The balanced default.", factor: 1.1 },
+  { id: "loaded", name: "Loaded", emoji: "🎒", blurb: "175% of forecast. Rarely sells out, more cash in jars.", factor: 1.75 },
+  { id: "maxout", name: "Max Out", emoji: "🚀", blurb: "Fill every jar to capacity. Never miss a sale, heavy cash tied up.", factor: 3 },
+];
+
+// Bulk buying: the supplier rewards bigger orders. Applies to cash and sats
+// payments; the Lightning 8% comes on top when paying in sats.
+export const BULK_TIERS: { minQty: number; discount: number }[] = [
+  { minQty: 100, discount: 0.15 },
+  { minQty: 50, discount: 0.1 },
+  { minQty: 25, discount: 0.05 },
+];
+
+export const bulkDiscountFor = (quantity: number): number => {
+  for (const tier of BULK_TIERS) if (quantity >= tier.minQty) return tier.discount;
+  return 0;
+};
+
 export const ZAP_PROMO_COST_SATS = 5000;
 export const RESCUE_LOAN_USD = 200;
 export const RESCUE_LOAN_SATS = 220000; // $200 at game rate, plus 10%
@@ -43,7 +71,7 @@ export const INITIAL_UPGRADES: Upgrade[] = [
   { id: "ln-terminal", name: "Lightning Terminal", emoji: "⚡", blurb: "Accept Lightning in every machine. 45% of customers pay in sats: instant, no 2.9% card fee. Unlocks Lightning supplier payments, zap promos and rescue loans.", cost: 150, owned: false },
   { id: "big-jar", name: "Big Jar", emoji: "🫙", blurb: "+60% stock capacity in every machine.", cost: 120, owned: false },
   { id: "neon", name: "Neon Sign", emoji: "💡", blurb: "+15% demand everywhere, forever. Very bubbly.", cost: 200, owned: false },
-  { id: "auto-restock", name: "Restock Bot", emoji: "🤖", blurb: "Every morning the bot tops stock up to the demand forecast, if you can afford it.", cost: 350, owned: false },
+  { id: "auto-restock", name: "Restock Bot", emoji: "🤖", blurb: "Every morning the bot restocks for you. Four fill levels: Lean, Standard, Loaded, Max Out. Set it and let Auto Play run.", cost: 350, owned: false },
 ];
 
 export const EVENTS: GameEvent[] = [
@@ -97,6 +125,7 @@ export const freshState = (): GameState => ({
   locations: INITIAL_LOCATIONS.map((l) => ({ ...l })),
   upgrades: INITIAL_UPGRADES.map((u) => ({ ...u })),
   marketingSpend: 3,
+  restockLevel: "standard",
   taxRate: 0.15,
   depreciationRate: 0.01,
   reputation: 50,
@@ -214,7 +243,8 @@ export const purchaseStock = (
   if (totalStock(state) + quantity > stockCapacity(state))
     return { state, ok: false, message: `Jar is full. Capacity is ${stockCapacity(state)} units (Big Jar upgrade helps)` };
 
-  const costUsd = product.costPrice * quantity;
+  const bulk = bulkDiscountFor(quantity);
+  const costUsd = product.costPrice * quantity * (1 - bulk);
   const s = { ...state, products: state.products.map((p) => ({ ...p })), lnTx: [...state.lnTx], log: [...state.log] };
 
   if (payMethod === "sats") {
@@ -223,14 +253,14 @@ export const purchaseStock = (
     const costSats = Math.ceil(costUsd * SATS_PER_USD * (1 - LN_SUPPLIER_DISCOUNT));
     if (costSats > state.sats) return { state, ok: false, message: `Not enough sats (needs ${costSats.toLocaleString()})` };
     s.sats -= costSats;
-    s.lnTx = [{ id: nextId(), day: s.day, label: `Supplier: ${quantity}x ${product.name} (8% Lightning discount)`, sats: -costSats }, ...s.lnTx].slice(0, 40);
+    s.lnTx = [{ id: nextId(), day: s.day, label: `Supplier: ${quantity}x ${product.name} (8% Lightning${bulk > 0 ? ` + ${Math.round(bulk * 100)}% bulk` : ""} discount)`, sats: -costSats }, ...s.lnTx].slice(0, 40);
   } else {
     if (costUsd > state.cash) return { state, ok: false, message: "Not enough cash" };
     s.cash -= costUsd;
   }
   const target = s.products.find((p) => p.id === productId)!;
   target.stock += quantity;
-  return { state: s, ok: true, message: `Stocked ${quantity}x ${product.name}` };
+  return { state: s, ok: true, message: `Stocked ${quantity}x ${product.name}${bulk > 0 ? ` (bulk discount ${Math.round(bulk * 100)}% applied)` : ""}` };
 };
 
 export const buyMachine = (state: GameState, locationId: string): ActionResult => {
@@ -335,17 +365,24 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   };
   const finishedDay = s.day;
 
-  // Restock Bot does its morning round before sales.
+  // Restock Bot does its morning round before sales, at the player's fill
+  // level. It buys in bulk where it can, so bulk discounts apply here too.
   if (hasUpgrade(s, "auto-restock")) {
-    for (const p of s.products) {
-      if (!p.unlocked) continue;
-      const want = Math.ceil(forecastDemand(s, p) * 1.1);
-      const need = Math.max(0, want - p.stock);
-      const room = stockCapacity(s) - totalStock(s);
-      const qty = Math.min(need, room, Math.floor(s.cash / p.costPrice));
-      if (qty > 0) {
-        p.stock += qty;
-        s.cash -= qty * p.costPrice;
+    const level = RESTOCK_LEVELS.find((l) => l.id === s.restockLevel) ?? RESTOCK_LEVELS[1];
+    const passes = level.id === "maxout" ? [level.factor, 6] : [level.factor];
+    for (const factor of passes) {
+      for (const p of s.products) {
+        if (!p.unlocked) continue;
+        const want = Math.ceil(forecastDemand(s, p) * factor);
+        const need = Math.max(0, want - p.stock);
+        const room = stockCapacity(s) - totalStock(s);
+        let qty = Math.min(need, room);
+        // shrink the order until it is affordable at its bulk-discounted price
+        while (qty > 0 && p.costPrice * qty * (1 - bulkDiscountFor(qty)) > s.cash) qty -= 1;
+        if (qty > 0) {
+          p.stock += qty;
+          s.cash -= p.costPrice * qty * (1 - bulkDiscountFor(qty));
+        }
       }
     }
   }

@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { GameState } from "@/types/game";
-import { formatCurrency, MACHINE_COST, MAX_MACHINES_PER_LOCATION, dailyRent, totalMachines } from "@/lib/gameLogic";
+import { formatCurrency, MACHINE_COST, MAX_MACHINES_PER_LOCATION, dailyRent, totalMachines, RESTOCK_LEVELS, hasUpgrade } from "@/lib/gameLogic";
 import { Lock, Plus, Sparkles, Megaphone } from "lucide-react";
 
 interface Props {
@@ -11,9 +11,10 @@ interface Props {
   onUnlockLocation: (locationId: string) => void;
   onBuyUpgrade: (upgradeId: string) => void;
   onMarketingChange: (spend: number) => void;
+  onRestockLevelChange: (levelId: string) => void;
 }
 
-export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUpgrade, onMarketingChange }: Props) => {
+export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUpgrade, onMarketingChange, onRestockLevelChange }: Props) => {
   return (
     <div className="space-y-6">
       <div>
@@ -65,7 +66,7 @@ export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUp
               <h3 className="font-black mt-2">{up.name}</h3>
               <p className="text-xs font-semibold text-muted-foreground mt-1 min-h-16">{up.blurb}</p>
               {up.owned ? (
-                <p className="font-black text-accent mt-3">✅ Installed</p>
+                <p className="font-black text-accent mt-3">✅ Installed{up.id === "auto-restock" ? ` · running ${RESTOCK_LEVELS.find((l) => l.id === gameState.restockLevel)?.name ?? "Standard"}` : ""}</p>
               ) : (
                 <Button onClick={() => onBuyUpgrade(up.id)} disabled={gameState.cash < up.cost} className="w-full rounded-full font-black mt-3">
                   Buy {formatCurrency(up.cost)}
@@ -74,6 +75,25 @@ export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUp
             </Card>
           ))}
         </div>
+
+        {hasUpgrade(gameState, "auto-restock") && (
+          <Card className="bubbly-card p-5 mt-4 bg-gradient-to-br from-teal-50 to-emerald-50">
+            <h3 className="font-black text-lg">🤖 Restock Bot fill level</h3>
+            <p className="text-xs font-bold text-muted-foreground mt-1">How full the bot keeps your jars every morning. It buys in bulk where it can, so the 25/50/100 bulk discounts apply to bot orders too.</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-3">
+              {RESTOCK_LEVELS.map((level) => {
+                const active = gameState.restockLevel === level.id;
+                return (
+                  <button key={level.id} onClick={() => onRestockLevelChange(level.id)}
+                    className={`rounded-2xl border-[3px] p-3 text-left transition-transform hover:-translate-y-0.5 ${active ? "border-accent bg-white shadow-lg" : "border-dashed bg-white/60"}`}>
+                    <p className="font-black">{level.emoji} {level.name} {active && "✅"}</p>
+                    <p className="text-[11px] font-semibold text-muted-foreground mt-1">{level.blurb}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );

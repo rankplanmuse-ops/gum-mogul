@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { GameState } from "@/types/game";
-import { formatCurrency, forecastDemand, hasUpgrade, SATS_PER_USD, LN_SUPPLIER_DISCOUNT } from "@/lib/gameLogic";
+import { formatCurrency, forecastDemand, hasUpgrade, SATS_PER_USD, LN_SUPPLIER_DISCOUNT, bulkDiscountFor } from "@/lib/gameLogic";
 import { Lock, ShoppingCart, Zap, DollarSign } from "lucide-react";
 import { useState } from "react";
 
@@ -30,7 +30,7 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
           </button>
         </div>
       </div>
-      <p className="text-sm font-semibold text-muted-foreground -mt-2">Set your price with the slider. Cheaper sells more, pricier earns more per gum, until customers walk away. Forecast shows expected sales tomorrow.</p>
+      <p className="text-sm font-semibold text-muted-foreground -mt-2">Set your price with the slider. Cheaper sells more, pricier earns more per gum, until customers walk away. Forecast shows expected sales tomorrow. <strong className="text-accent">Bulk discounts: 25+ gums 5% off, 50+ 10% off, 100+ 15% off</strong>, on cash and sats orders alike.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {gameState.products.map((p) => {
@@ -50,7 +50,8 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
           const forecast = Math.round(forecastDemand(gameState, p));
           const margin = p.sellPrice - p.costPrice;
           const q = qty[p.id] ?? 10;
-          const costUsd = p.costPrice * q;
+          const bulk = bulkDiscountFor(q);
+          const costUsd = p.costPrice * q * (1 - bulk);
           const costSats = Math.ceil(costUsd * SATS_PER_USD * (1 - LN_SUPPLIER_DISCOUNT));
           const low = p.stock < forecast;
           const step = p.refPrice < 1 ? 0.05 : 0.25;
@@ -84,8 +85,8 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
 
               <div className="flex items-center gap-2 mt-4">
                 <div className="flex rounded-full overflow-hidden border-2">
-                  {[10, 25, 50].map((n) => (
-                    <button key={n} onClick={() => setQty({ ...qty, [p.id]: n })} className={`px-3 py-1.5 text-sm font-black ${q === n ? "bg-secondary text-white" : "bg-white text-muted-foreground"}`}>{n}</button>
+                  {[10, 25, 50, 100].map((n) => (
+                    <button key={n} onClick={() => setQty({ ...qty, [p.id]: n })} className={`px-2.5 py-1.5 text-sm font-black ${q === n ? "bg-secondary text-white" : "bg-white text-muted-foreground"}`}>{n}</button>
                   ))}
                 </div>
                 <Button onClick={() => onPurchase(p.id, q, method)} className="flex-1 rounded-full font-black gap-1">
@@ -93,6 +94,11 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
                   {method === "sats" ? `${costSats.toLocaleString()} sats` : formatCurrency(costUsd)}
                 </Button>
               </div>
+              <p className="text-xs font-bold mt-2">
+                {bulk > 0
+                  ? <span className="text-accent">🏷️ Bulk discount applied: {Math.round(bulk * 100)}% off this order{method === "sats" ? ", plus the 8% Lightning discount" : ""}</span>
+                  : <span className="text-muted-foreground">Order 25+ for 5% off, 50+ for 10%, 100+ for 15%</span>}
+              </p>
             </Card>
           );
         })}

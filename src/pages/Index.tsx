@@ -13,7 +13,8 @@ import {
   zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock,
   stockCapacity, totalMachines, hasUpgrade, SAVE_KEY, ActionResult,
 } from "@/lib/gameLogic";
-import { Play, FastForward, RotateCcw, HelpCircle, X } from "lucide-react";
+import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX } from "lucide-react";
+import { chiptune, MUSIC_PREF_KEY } from "@/lib/music";
 import { toast } from "sonner";
 
 const loadSave = (): GameState => {
@@ -40,6 +41,24 @@ const Index = () => {
   const [gameState, setGameState] = useState<GameState>(loadSave);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [musicOn, setMusicOn] = useState(false);
+
+  // If the player left music on last visit, browsers still demand one
+  // gesture before audio: the first click or tap anywhere starts it.
+  useEffect(() => {
+    let wanted = false;
+    try { wanted = localStorage.getItem(MUSIC_PREF_KEY) === "on"; } catch { wanted = false; }
+    if (!wanted) return;
+    const kick = () => { chiptune.start(); setMusicOn(true); };
+    window.addEventListener("pointerdown", kick, { once: true });
+    return () => window.removeEventListener("pointerdown", kick);
+  }, []);
+
+  const toggleMusic = () => {
+    const nowOn = chiptune.toggle();
+    setMusicOn(nowOn);
+    try { localStorage.setItem(MUSIC_PREF_KEY, nowOn ? "on" : "off"); } catch { /* ignore */ }
+  };
   const stateRef = useRef(gameState);
   stateRef.current = gameState;
 
@@ -94,6 +113,15 @@ const Index = () => {
         ))}
       </div>
 
+      <button
+        onClick={toggleMusic}
+        aria-label={musicOn ? "Turn the 8-bit music off" : "Turn the 8-bit music on"}
+        title={musicOn ? "Music: on (8-bit chiptune, synthesized live)" : "Music: off"}
+        className={`fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full border-[3px] border-white shadow-xl flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95 ${musicOn ? "bg-gradient-to-br from-fuchsia-500 to-amber-500 animate-floaty" : "bg-slate-500/85"}`}
+      >
+        {musicOn ? <Volume2 className="h-7 w-7" /> : <VolumeX className="h-7 w-7" />}
+      </button>
+
       <div className="relative z-10 container mx-auto px-4 py-8 space-y-8 max-w-7xl">
         <header className="text-center space-y-2">
           <div className="text-6xl animate-floaty inline-block">🍬</div>
@@ -112,6 +140,7 @@ const Index = () => {
               <p>4. <strong>Grow.</strong> Unlock flavours at revenue milestones, open new locations, add machines, buy upgrades.</p>
               <p>5. <strong>Go Lightning ⚡.</strong> The $150 terminal lets customers pay in sats: instant, fee free. Pay suppliers in sats for 8% off, run zap promos, and if cash runs dry, a Lightning rescue loan can save the run.</p>
               <p>6. <strong>Do not go broke.</strong> Three days in a row with negative cash ends the game. Your progress auto-saves in this browser.</p>
+              <p>🎵 <strong>Soundtrack:</strong> the speaker button (bottom right) plays an original 8-bit chiptune, synthesized live in your browser, Game Boy style. No audio files.</p>
             </div>
           )}
         </header>
@@ -167,6 +196,7 @@ const Index = () => {
           onUnlockLocation={(id) => apply(unlockLocation(gameState, id))}
           onBuyUpgrade={(id) => apply(buyUpgrade(gameState, id))}
           onMarketingChange={(spend) => setGameState((s) => ({ ...s, marketingSpend: spend }))}
+          onRestockLevelChange={(levelId) => { setGameState((s) => ({ ...s, restockLevel: levelId })); toast.success(`Restock Bot set to ${levelId}`); }}
         />
 
         <InsightsPanel gameState={gameState} />
