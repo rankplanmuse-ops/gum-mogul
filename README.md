@@ -15,9 +15,13 @@ locations, survive random events, and stack sats through a built-in
 - **Real business maths, taught by playing:** margins, price elasticity,
   rent, marketing ROI, card fees, depreciation and profit tax, all visible
   in a daily profit and loss panel.
-- **An empire, not one machine:** 5 locations (Corner Shop, School Gates,
-  Arcade Alley, Mega Mall, Airport Terminal), purchasable machines,
-  7 gum flavours that unlock at revenue milestones, and 4 upgrades.
+- **An empire, not one machine:** 12 locations across two cities.
+  Bubbleville: Corner Shop, School Gates, Bus Station, Arcade Alley,
+  University Campus, Mega Mall, Beach Boardwalk, Airport Terminal.
+  Opening the Airport unlocks Neon Bay: Ferry Pier, Neon Night Market,
+  Tech District, and the Gum Mogul Kiosk, your own shop with room for
+  5 machines. Plus purchasable machines, 7 gum flavours that unlock
+  at revenue milestones, and 4 upgrades.
   Bulk supplier discounts (25+ gums 5% off, 50+ 10%, 100+ 15%) and a
   Restock Bot with four fill levels (Lean, Standard, Loaded, Max Out)
   reward players who plan their working capital.
@@ -35,7 +39,7 @@ locations, survive random events, and stack sats through a built-in
     zap link to a Lightning Address. The game itself never touches real
     money or real keys; in-game sats are simulated at a round
     1,000 sats = $1 teaching rate.
-- **Meta game:** 14 achievements, revenue and profit charts, an empire
+- **Meta game:** 17 achievements, revenue and profit charts, an empire
   diary, auto-save to your browser, and auto-play for idle moguls.
 - **Original 8-bit soundtrack:** a Game Boy style chiptune (square lead,
   triangle bass, noise hats) synthesized live with WebAudio from the

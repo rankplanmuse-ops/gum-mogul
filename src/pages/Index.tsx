@@ -23,7 +23,16 @@ const loadSave = (): GameState => {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed.day === "number" && Array.isArray(parsed.products)) {
-        return { ...freshState(), ...parsed };
+        const merged = { ...freshState(), ...parsed };
+        // Locations added in later versions must appear in old saves:
+        // keep the player's unlocked/machines for ids they already have.
+        if (Array.isArray(parsed.locations)) {
+          merged.locations = freshState().locations.map((fresh) => {
+            const saved = parsed.locations.find((l: { id: string }) => l.id === fresh.id);
+            return saved ? { ...fresh, unlocked: !!saved.unlocked, machines: saved.machines ?? fresh.machines } : fresh;
+          });
+        }
+        return merged;
       }
     }
   } catch { /* corrupted save falls through to a fresh game */ }
@@ -169,8 +178,8 @@ const Index = () => {
               <Button onClick={() => setIsAutoPlaying(!isAutoPlaying)} variant={isAutoPlaying ? "destructive" : "secondary"} className="flex-1 h-14 text-lg rounded-full font-black gap-2">
                 <FastForward className="h-5 w-5" /> {isAutoPlaying ? "Stop Auto" : "Auto Play"}
               </Button>
-              <Button onClick={handleReset} variant="outline" className="h-14 rounded-full gap-2 font-black" title="Reset game">
-                <RotateCcw className="h-5 w-5" />
+              <Button onClick={handleReset} variant="outline" className="h-14 rounded-full gap-2 font-black px-5" title="Reset game: wipe the save and start over">
+                <RotateCcw className="h-5 w-5" /> Reset game
               </Button>
             </div>
             <CostBreakdownPanel costs={breakdownCosts} title={gameState.lastDay ? `Yesterday (Day ${gameState.day - 1}) in numbers` : "Today, forecast"} lnShare={gameState.lastDay ? gameState.lastDay.lnShare : hasUpgrade(gameState, "ln-terminal") ? 0.45 : 0} />

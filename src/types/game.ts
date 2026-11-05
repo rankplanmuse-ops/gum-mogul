@@ -17,11 +17,14 @@ export interface Location {
   name: string;
   emoji: string;
   blurb: string;
+  city: string;
   traffic: number;
   rentPerMachine: number;
   unlockCost: number;
   unlocked: boolean;
   machines: number;
+  machineCap?: number; // defaults to the global cap; the kiosk shop fits more
+  requiresLocation?: string; // another location that must be open first (city gate)
 }
 
 export interface Upgrade {

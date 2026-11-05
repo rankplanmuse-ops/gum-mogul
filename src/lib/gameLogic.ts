@@ -59,13 +59,26 @@ export const INITIAL_PRODUCTS: Product[] = [
   { id: "cosmic", name: "Cosmic Cola Fizz", emoji: "🚀", color: "from-fuchsia-400 to-pink-600", costPrice: 5.0, sellPrice: 15.0, refPrice: 15.0, baseDemand: 1, stock: 0, unlocked: false, unlockRevenue: 3000 },
 ];
 
+export const CITIES = ["Bubbleville", "Neon Bay"] as const;
+
 export const INITIAL_LOCATIONS: Location[] = [
-  { id: "corner", name: "Corner Shop", emoji: "🏪", blurb: "Your first spot. Steady locals, kind rent.", traffic: 1.0, rentPerMachine: 5, unlockCost: 0, unlocked: true, machines: 1 },
-  { id: "school", name: "School Gates", emoji: "🎒", blurb: "Recess rushes. Berry Blast flies off the shelf.", traffic: 1.4, rentPerMachine: 8, unlockCost: 200, unlocked: false, machines: 0 },
-  { id: "arcade", name: "Arcade Alley", emoji: "🕹️", blurb: "Token rich, gum hungry, open late.", traffic: 2.0, rentPerMachine: 14, unlockCost: 600, unlocked: false, machines: 0 },
-  { id: "mall", name: "Mega Mall", emoji: "🛍️", blurb: "Weekend crowds and premium tastes.", traffic: 2.6, rentPerMachine: 22, unlockCost: 1500, unlocked: false, machines: 0 },
-  { id: "airport", name: "Airport Terminal", emoji: "✈️", blurb: "Captive audience, mogul money.", traffic: 3.4, rentPerMachine: 35, unlockCost: 4000, unlocked: false, machines: 0 },
+  // City 1: Bubbleville, where every mogul starts.
+  { id: "corner", name: "Corner Shop", emoji: "🏪", city: "Bubbleville", blurb: "Your first spot. Steady locals, kind rent.", traffic: 1.0, rentPerMachine: 5, unlockCost: 0, unlocked: true, machines: 1 },
+  { id: "school", name: "School Gates", emoji: "🎒", city: "Bubbleville", blurb: "Recess rushes. Berry Blast flies off the shelf.", traffic: 1.4, rentPerMachine: 8, unlockCost: 200, unlocked: false, machines: 0 },
+  { id: "bus", name: "Bus Station", emoji: "🚏", city: "Bubbleville", blurb: "Commuters with exact change and zero patience.", traffic: 1.7, rentPerMachine: 11, unlockCost: 400, unlocked: false, machines: 0 },
+  { id: "arcade", name: "Arcade Alley", emoji: "🕹️", city: "Bubbleville", blurb: "Token rich, gum hungry, open late.", traffic: 2.0, rentPerMachine: 14, unlockCost: 600, unlocked: false, machines: 0 },
+  { id: "university", name: "University Campus", emoji: "🎓", city: "Bubbleville", blurb: "All-nighters run on caffeine and Cosmic Cola Fizz.", traffic: 2.3, rentPerMachine: 18, unlockCost: 1000, unlocked: false, machines: 0 },
+  { id: "mall", name: "Mega Mall", emoji: "🛍️", city: "Bubbleville", blurb: "Weekend crowds and premium tastes.", traffic: 2.6, rentPerMachine: 22, unlockCost: 1500, unlocked: false, machines: 0 },
+  { id: "beach", name: "Beach Boardwalk", emoji: "🏖️", city: "Bubbleville", blurb: "Sun, salt air, and a queue at every machine.", traffic: 3.0, rentPerMachine: 28, unlockCost: 2500, unlocked: false, machines: 0 },
+  { id: "airport", name: "Airport Terminal", emoji: "✈️", city: "Bubbleville", blurb: "Captive audience, mogul money. Opening this unlocks the move to Neon Bay.", traffic: 3.4, rentPerMachine: 35, unlockCost: 4000, unlocked: false, machines: 0 },
+  // City 2: Neon Bay. Bigger crowds, bigger rents, opens once the Airport runs.
+  { id: "ferry", name: "Ferry Pier", emoji: "⛴️", city: "Neon Bay", blurb: "Every crossing lands a boatload of fresh chewers.", traffic: 3.9, rentPerMachine: 42, unlockCost: 6000, unlocked: false, machines: 0, requiresLocation: "airport" },
+  { id: "nightmarket", name: "Neon Night Market", emoji: "🌃", city: "Neon Bay", blurb: "Open till 3am. The lights alone sell half the gum.", traffic: 4.4, rentPerMachine: 50, unlockCost: 8000, unlocked: false, machines: 0, requiresLocation: "airport" },
+  { id: "tech", name: "Tech District", emoji: "🏙️", city: "Neon Bay", blurb: "Startups pay in sats and chew Diamond Bubble at their desks.", traffic: 5.2, rentPerMachine: 60, unlockCost: 11000, unlocked: false, machines: 0, requiresLocation: "airport" },
+  { id: "kiosk", name: "Gum Mogul Kiosk", emoji: "🛖", city: "Neon Bay", blurb: "Your OWN shop, not a rented slot: fits 5 machines under one bubbly roof. The endgame address.", traffic: 6.0, rentPerMachine: 70, unlockCost: 15000, unlocked: false, machines: 0, machineCap: 5, requiresLocation: "airport" },
 ];
+
+export const machineCapOf = (loc: Location): number => loc.machineCap ?? MAX_MACHINES_PER_LOCATION;
 
 export const INITIAL_UPGRADES: Upgrade[] = [
   { id: "ln-terminal", name: "Lightning Terminal", emoji: "⚡", blurb: "Accept Lightning in every machine. 45% of customers pay in sats: instant, no 2.9% card fee. Unlocks Lightning supplier payments, zap promos and rescue loans.", cost: 150, owned: false },
@@ -102,6 +115,9 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "machines-3", emoji: "🎰", name: "Triplets", desc: "Own 3 machines" },
   { id: "machines-6", emoji: "🏭", name: "Fleet Owner", desc: "Own 6 machines" },
   { id: "locations-3", emoji: "🗺️", name: "On The Map", desc: "Open 3 locations" },
+  { id: "locations-8", emoji: "🌍", name: "Globetrotter", desc: "Open 8 locations" },
+  { id: "two-cities", emoji: "🌃", name: "Two Cities", desc: "Open a location in Neon Bay" },
+  { id: "kiosk", emoji: "🛖", name: "Shopkeeper", desc: "Open your own Gum Mogul Kiosk" },
   { id: "ln-terminal", emoji: "⚡", name: "Lightning Ready", desc: "Buy the Lightning Terminal" },
   { id: "sats-10000", emoji: "🟠", name: "Sats Stacker", desc: "Earn 10,000 sats all time" },
   { id: "sats-100000", emoji: "🚀", name: "Sats Whale", desc: "Earn 100,000 sats all time" },
@@ -204,6 +220,9 @@ export const unlockAchievements = (input: GameState): GameState => {
     ["machines-3", totalMachines(s) >= 3],
     ["machines-6", totalMachines(s) >= 6],
     ["locations-3", s.locations.filter((l) => l.unlocked).length >= 3],
+    ["locations-8", s.locations.filter((l) => l.unlocked).length >= 8],
+    ["two-cities", s.locations.some((l) => l.city === "Neon Bay" && l.unlocked)],
+    ["kiosk", s.locations.find((l) => l.id === "kiosk")?.unlocked ?? false],
     ["ln-terminal", hasUpgrade(s, "ln-terminal")],
     ["sats-10000", s.totalSatsEarned >= 10000],
     ["sats-100000", s.totalSatsEarned >= 100000],
@@ -266,7 +285,7 @@ export const purchaseStock = (
 export const buyMachine = (state: GameState, locationId: string): ActionResult => {
   const loc = state.locations.find((l) => l.id === locationId);
   if (!loc?.unlocked) return { state, ok: false, message: "Open that location first" };
-  if (loc.machines >= MAX_MACHINES_PER_LOCATION) return { state, ok: false, message: `${loc.name} is full: ${MAX_MACHINES_PER_LOCATION} machines max per location` };
+  if (loc.machines >= machineCapOf(loc)) return { state, ok: false, message: `${loc.name} is full: ${machineCapOf(loc)} machines max here` };
   if (state.cash < MACHINE_COST) return { state, ok: false, message: `A machine costs $${MACHINE_COST}` };
   const s = { ...state, locations: state.locations.map((l) => ({ ...l })), log: [...state.log] };
   s.cash -= MACHINE_COST;
@@ -278,6 +297,11 @@ export const buyMachine = (state: GameState, locationId: string): ActionResult =
 export const unlockLocation = (state: GameState, locationId: string): ActionResult => {
   const loc = state.locations.find((l) => l.id === locationId);
   if (!loc || loc.unlocked) return { state, ok: false, message: "Already open" };
+  if (loc.requiresLocation) {
+    const gate = state.locations.find((l) => l.id === loc.requiresLocation);
+    if (gate && !gate.unlocked)
+      return { state, ok: false, message: `${loc.city} opens after ${gate.name}: prove the model in Bubbleville first` };
+  }
   if (state.cash < loc.unlockCost + MACHINE_COST)
     return { state, ok: false, message: `Needs $${loc.unlockCost} to open plus $${MACHINE_COST} for its first machine` };
   const s = { ...state, locations: state.locations.map((l) => ({ ...l })), log: [...state.log] };
