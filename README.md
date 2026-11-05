@@ -41,6 +41,8 @@ locations, survive random events, and stack sats through a built-in
     1,000 sats = $1 teaching rate.
 - **Meta game:** 17 achievements, revenue and profit charts, an empire
   diary, auto-save to your browser, and auto-play for idle moguls.
+  Built for phones too: a one-tap Refill jars button sits under Next
+  Day, and on mobile both stick to the bottom of the screen.
 - **Original 8-bit soundtrack:** a Game Boy style chiptune (square lead,
   triangle bass, noise hats) synthesized live with WebAudio from the
   speaker button. No audio files, nothing sampled: the loop is code.

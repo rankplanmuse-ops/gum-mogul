@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { GameState } from "@/types/game";
 import {
   freshState, processDayEnd, purchaseStock, buyMachine, unlockLocation, buyUpgrade,
-  zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock,
+  zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock, refillLines, refillJars,
   stockCapacity, totalMachines, hasUpgrade, SAVE_KEY, ActionResult,
 } from "@/lib/gameLogic";
 import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX } from "lucide-react";
@@ -85,6 +85,9 @@ const Index = () => {
   }, [isAutoPlaying]);
 
   const costs = forecastCosts(gameState);
+  const refill = refillLines(gameState);
+  const refillUnits = refill.reduce((n, l) => n + l.qty, 0);
+  const refillCost = refill.reduce((n, l) => n + l.cost, 0);
   const apply = (result: ActionResult) => {
     if (result.ok) { setGameState(result.state); toast.success(result.message); }
     else toast.error(result.message);
@@ -126,24 +129,37 @@ const Index = () => {
         onClick={toggleMusic}
         aria-label={musicOn ? "Turn the 8-bit music off" : "Turn the 8-bit music on"}
         title={musicOn ? "Music: on (8-bit chiptune, synthesized live)" : "Music: off"}
-        className={`fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full border-[3px] border-white shadow-xl flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95 ${musicOn ? "bg-gradient-to-br from-fuchsia-500 to-amber-500 animate-floaty" : "bg-slate-500/85"}`}
+        className={`fixed bottom-24 right-4 lg:bottom-5 lg:right-5 z-50 h-14 w-14 rounded-full border-[3px] border-white shadow-xl flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95 ${musicOn ? "bg-gradient-to-br from-fuchsia-500 to-amber-500 animate-floaty" : "bg-slate-500/85"}`}
       >
         {musicOn ? <Volume2 className="h-7 w-7" /> : <VolumeX className="h-7 w-7" />}
       </button>
 
-      <div className="relative z-10 container mx-auto px-4 py-8 space-y-8 max-w-7xl">
+      {/* Mobile sticky action bar: the whole game loop without scrolling. */}
+      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-white/92 backdrop-blur border-t-2 px-3 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex gap-2">
+        <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-1 h-12 rounded-full font-black gap-1.5">
+          <Play className="h-5 w-5" /> Next Day
+        </Button>
+        <Button onClick={() => apply(refillJars(gameState))} disabled={refillUnits === 0 || gameState.gameOver} variant="secondary" className="flex-1 h-12 rounded-full font-black gap-1.5 border-2 border-teal-300 bg-teal-50 text-teal-900">
+          🧃 Refill{refillUnits > 0 ? ` $${refillCost.toFixed(0)}` : ""}
+        </Button>
+        <Button onClick={() => setIsAutoPlaying(!isAutoPlaying)} variant={isAutoPlaying ? "destructive" : "outline"} className="h-12 w-12 rounded-full font-black p-0" aria-label={isAutoPlaying ? "Stop auto play" : "Auto play"}>
+          <FastForward className="h-5 w-5" />
+        </Button>
+      </div>
+
+      <div className="relative z-10 container mx-auto px-4 py-5 pb-28 lg:pb-8 sm:py-8 space-y-6 sm:space-y-8 max-w-7xl">
         <header className="text-center space-y-2">
-          <div className="text-6xl animate-floaty inline-block">🍬</div>
-          <h1 className="text-6xl font-black tracking-tight bg-gradient-to-r from-pink-600 via-fuchsia-500 to-amber-500 bg-clip-text text-transparent drop-shadow-sm">
+          <div className="text-5xl sm:text-6xl animate-floaty inline-block">🍬</div>
+          <h1 className="text-5xl sm:text-6xl font-black tracking-tight bg-gradient-to-r from-pink-600 via-fuchsia-500 to-amber-500 bg-clip-text text-transparent drop-shadow-sm">
             Gum Mogul
           </h1>
-          <p className="text-lg font-bold text-muted-foreground">Build a bubblegum empire, one machine, one zap at a time. Reach $25,000 net worth and take the crown 👑</p>
+          <p className="text-base sm:text-lg font-bold text-muted-foreground">Build a bubblegum empire, one machine, one zap at a time. Reach $25,000 net worth and take the crown 👑</p>
           <button onClick={() => setShowHelp(!showHelp)} className="inline-flex items-center gap-1 font-black text-primary underline underline-offset-4">
             {showHelp ? <X className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />} How to play
           </button>
           {showHelp && (
             <div className="max-w-2xl mx-auto text-left bg-white/85 backdrop-blur rounded-3xl border-[3px] p-5 text-sm font-semibold space-y-2 animate-pop">
-              <p>1. <strong>Stock the jars.</strong> Buy gum before customers arrive. Empty slots lose sales and reputation.</p>
+              <p>1. <strong>Stock the jars.</strong> Buy gum before customers arrive, or tap <strong>🧃 Refill jars</strong> right under the Next Day button to top everything up to forecast in one go (bulk discounts included). Empty slots lose sales and reputation. On mobile the Next Day and Refill buttons stick to the bottom of the screen.</p>
               <p>2. <strong>Set prices.</strong> The slider bends demand: deals sell fast, greedy prices sell slow and dent your reputation.</p>
               <p>3. <strong>Hit Next Day.</strong> Sales land, rent, marketing, card fees and tax leave. Watch the diary for events.</p>
               <p>4. <strong>Grow.</strong> Unlock flavours at revenue milestones, open new locations, add machines, buy upgrades.</p>
@@ -169,17 +185,22 @@ const Index = () => {
         <FinancialDashboard gameState={gameState} dailyProfit={costs.netProfit} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             <VendingMachine gumCount={totalStock(gameState)} capacity={stockCapacity(gameState)} machines={totalMachines(gameState)} />
-            <div className="flex gap-3">
-              <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-1 h-14 text-lg rounded-full font-black gap-2 shadow-lg">
-                <Play className="h-5 w-5" /> Next Day
-              </Button>
-              <Button onClick={() => setIsAutoPlaying(!isAutoPlaying)} variant={isAutoPlaying ? "destructive" : "secondary"} className="flex-1 h-14 text-lg rounded-full font-black gap-2">
-                <FastForward className="h-5 w-5" /> {isAutoPlaying ? "Stop Auto" : "Auto Play"}
-              </Button>
-              <Button onClick={handleReset} variant="outline" className="h-14 rounded-full gap-2 font-black px-5" title="Reset game: wipe the save and start over">
-                <RotateCcw className="h-5 w-5" /> Reset game
+            <div className="order-first lg:order-none space-y-3">
+              <div className="flex gap-3">
+                <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-1 h-14 text-lg rounded-full font-black gap-2 shadow-lg">
+                  <Play className="h-5 w-5" /> Next Day
+                </Button>
+                <Button onClick={() => setIsAutoPlaying(!isAutoPlaying)} variant={isAutoPlaying ? "destructive" : "secondary"} className="flex-1 h-14 text-lg rounded-full font-black gap-2">
+                  <FastForward className="h-5 w-5" /> {isAutoPlaying ? "Stop Auto" : "Auto Play"}
+                </Button>
+                <Button onClick={handleReset} variant="outline" className="h-14 rounded-full gap-2 font-black px-5" title="Reset game: wipe the save and start over">
+                  <RotateCcw className="h-5 w-5" /> Reset game
+                </Button>
+              </div>
+              <Button onClick={() => apply(refillJars(gameState))} disabled={refillUnits === 0 || gameState.gameOver} variant="secondary" className="w-full h-12 rounded-full font-black gap-2 border-2 border-teal-300 bg-teal-50 text-teal-900">
+                🧃 Refill jars{refillUnits > 0 ? `: ${refillUnits} gums for $${refillCost.toFixed(2)}` : " (already at forecast)"}
               </Button>
             </div>
             <CostBreakdownPanel costs={breakdownCosts} title={gameState.lastDay ? `Yesterday (Day ${gameState.day - 1}) in numbers` : "Today, forecast"} lnShare={gameState.lastDay ? gameState.lastDay.lnShare : hasUpgrade(gameState, "ln-terminal") ? 0.45 : 0} />

@@ -375,6 +375,50 @@ export const sellSats = (state: GameState, amount: number): ActionResult => {
   return { state: s, ok: true, message: `Sold ${amount.toLocaleString()} sats` };
 };
 
+// ---- Manual refill -------------------------------------------------------------------
+// One shared planner for the Restock Bot and the manual "Refill jars" button:
+// tops every unlocked gum up to forecast x fill level, jar room and cash
+// permitting, at bulk-discounted prices.
+export interface RefillLine { productId: string; qty: number; cost: number }
+export const refillLines = (state: GameState): RefillLine[] => {
+  const level = RESTOCK_LEVELS.find((l) => l.id === state.restockLevel) ?? RESTOCK_LEVELS[1];
+  const passes = level.id === "maxout" ? [level.factor, 6] : [level.factor];
+  const stock = new Map(state.products.map((p) => [p.id, p.stock]));
+  let room = stockCapacity(state) - totalStock(state);
+  let cash = state.cash;
+  const lines = new Map<string, RefillLine>();
+  for (const factor of passes) {
+    for (const p of state.products) {
+      if (!p.unlocked) continue;
+      const want = Math.ceil(forecastDemand(state, p) * factor);
+      let qty = Math.min(Math.max(0, want - (stock.get(p.id) ?? 0)), room);
+      while (qty > 0 && p.costPrice * qty * (1 - bulkDiscountFor(qty)) > cash) qty -= 1;
+      if (qty > 0) {
+        const cost = p.costPrice * qty * (1 - bulkDiscountFor(qty));
+        const prev = lines.get(p.id);
+        lines.set(p.id, { productId: p.id, qty: (prev?.qty ?? 0) + qty, cost: (prev?.cost ?? 0) + cost });
+        stock.set(p.id, (stock.get(p.id) ?? 0) + qty);
+        room -= qty;
+        cash -= cost;
+      }
+    }
+  }
+  return [...lines.values()];
+};
+
+export const refillJars = (state: GameState): ActionResult => {
+  const lines = refillLines(state);
+  const units = lines.reduce((n, l) => n + l.qty, 0);
+  if (units === 0) return { state, ok: false, message: "Jars already match the forecast (or the till is empty)" };
+  const total = lines.reduce((n, l) => n + l.cost, 0);
+  const s = { ...state, products: state.products.map((p) => ({ ...p })) };
+  for (const line of lines) {
+    s.products.find((p) => p.id === line.productId)!.stock += line.qty;
+  }
+  s.cash -= total;
+  return { state: s, ok: true, message: `Refilled ${units} gums for $${total.toFixed(2)} (bulk discounts applied where earned)` };
+};
+
 // ---- The day engine ----------------------------------------------------------------
 export const processDayEnd = (input: GameState, rand: () => number = Math.random): GameState => {
   const s: GameState = {
@@ -389,25 +433,12 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   };
   const finishedDay = s.day;
 
-  // Restock Bot does its morning round before sales, at the player's fill
-  // level. It buys in bulk where it can, so bulk discounts apply here too.
+  // Restock Bot does its morning round before sales, using the same planner
+  // as the manual Refill button, at the player's chosen fill level.
   if (hasUpgrade(s, "auto-restock")) {
-    const level = RESTOCK_LEVELS.find((l) => l.id === s.restockLevel) ?? RESTOCK_LEVELS[1];
-    const passes = level.id === "maxout" ? [level.factor, 6] : [level.factor];
-    for (const factor of passes) {
-      for (const p of s.products) {
-        if (!p.unlocked) continue;
-        const want = Math.ceil(forecastDemand(s, p) * factor);
-        const need = Math.max(0, want - p.stock);
-        const room = stockCapacity(s) - totalStock(s);
-        let qty = Math.min(need, room);
-        // shrink the order until it is affordable at its bulk-discounted price
-        while (qty > 0 && p.costPrice * qty * (1 - bulkDiscountFor(qty)) > s.cash) qty -= 1;
-        if (qty > 0) {
-          p.stock += qty;
-          s.cash -= p.costPrice * qty * (1 - bulkDiscountFor(qty));
-        }
-      }
+    for (const line of refillLines(s)) {
+      s.products.find((p) => p.id === line.productId)!.stock += line.qty;
+      s.cash -= line.cost;
     }
   }
 
