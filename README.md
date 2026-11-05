@@ -1,5 +1,7 @@
 # Gum Mogul 🍬⚡
 
+**▶ Play it live: https://rankplanmuse-ops.github.io/gum-mogul/**
+
 A free and open source bubblegum empire simulator that runs entirely in your
 browser. Stock vending machines, bend demand with your prices, open new
 locations, survive random events, and stack sats through a built-in
