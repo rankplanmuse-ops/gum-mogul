@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Gum Mogul design system: bubblegum pink, mint, lemon, sky. All HSL. */
+@layer base {
+  :root {
+    --background: 330 100% 97%;
+    --foreground: 320 30% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 320 30% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 320 30% 14%;
+    --primary: 330 85% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 262 80% 62%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 330 60% 93%;
+    --muted-foreground: 320 15% 42%;
+    --accent: 160 75% 38%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 330 50% 88%;
+    --input: 330 50% 88%;
+    --ring: 330 85% 55%;
+    --radius: 1.25rem;
+    --success: 160 75% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+    --profit: 160 75% 36%;
+    --loss: 0 84% 58%;
+    --neutral: 217 91% 60%;
+    --machine-red: 350 85% 55%;
+    --machine-chrome: 0 0% 85%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  .dark {
+    --background: 320 30% 10%;
+    --foreground: 330 40% 96%;
+    --card: 320 25% 15%;
+    --card-foreground: 330 40% 96%;
+    --popover: 320 25% 15%;
+    --popover-foreground: 330 40% 96%;
+    --primary: 330 85% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 262 80% 66%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 320 20% 20%;
+    --muted-foreground: 330 20% 70%;
+    --accent: 160 70% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 320 20% 24%;
+    --input: 320 20% 24%;
+    --ring: 330 85% 60%;
+    --success: 160 70% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+    --profit: 160 70% 50%;
+    --loss: 0 84% 65%;
+    --neutral: 217 91% 60%;
+    --machine-red: 350 85% 60%;
+    --machine-chrome: 0 0% 60%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: ui-rounded, "SF Pro Rounded", "Baloo 2", system-ui, sans-serif;
+  }
+}
+
+/* Bubbly motion */
+@keyframes bubble-rise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  10% { opacity: .55; }
+  90% { opacity: .45; }
+  100% { transform: translateY(-108vh) scale(1.15); opacity: 0; }
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+@keyframes pop-in {
+  0% { transform: scale(.6); opacity: 0; }
+  70% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg) scale(1.05); }
+  75% { transform: rotate(4deg) scale(1.05); }
+}
+@keyframes zap-flash {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.5) drop-shadow(0 0 12px rgba(250, 204, 21, .9)); }
+}
+.animate-floaty { animation: floaty 4s ease-in-out infinite; }
+.animate-pop { animation: pop-in .35s cubic-bezier(.2, 1.6, .4, 1) both; }
+.animate-wiggle-hover:hover { animation: wiggle .4s ease-in-out; }
+.animate-zap { animation: zap-flash 1.2s ease-in-out infinite; }
+.bubble {
+  position: absolute; bottom: -60px; border-radius: 9999px; pointer-events: none;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,255,255,.15) 60%);
+  border: 2px solid rgba(255,255,255,.5);
+  animation: bubble-rise linear infinite;
+}
+.bubbly-card {
+  @apply rounded-[1.75rem] border-[3px] shadow-[0_10px_0_rgba(0,0,0,0.06),0_20px_35px_-18px_rgba(219,39,119,0.35)];
+}
+.gumball {
+  @apply rounded-full shadow-inner flex items-center justify-center text-2xl shrink-0;
+  background-image: radial-gradient(circle at 30% 28%, rgba(255,255,255,.85), rgba(255,255,255,0) 55%);
+}
