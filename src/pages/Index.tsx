@@ -191,13 +191,14 @@ const Index = () => {
           </div>
         )}
 
-        {/* Fixed-height news slot: always rendered, so the daily event
-            headline never pushes the page around when it appears. */}
-        <div className="bg-white/85 backdrop-blur rounded-3xl sm:rounded-full py-2.5 px-6 font-bold text-center shadow min-h-[3.25rem] flex items-center justify-center">
+        {/* News bar: HARD fixed height at every breakpoint, content is
+            line-clamped inside it. The bar can never grow or shrink, so
+            the page below never shifts when the headline changes. */}
+        <div className="bg-white/85 backdrop-blur rounded-3xl sm:rounded-full px-6 font-bold text-center shadow h-[4.75rem] sm:h-[3.25rem] flex items-center justify-center overflow-hidden">
           {gameState.pendingEvent ? (
-            <p>🔮 Tomorrow: {gameState.pendingEvent.icon} <strong>{gameState.pendingEvent.title}</strong> · demand x{gameState.pendingEvent.demandFactor}. {gameState.pendingEvent.text}</p>
+            <p className="line-clamp-3 sm:line-clamp-1">🔮 Tomorrow: {gameState.pendingEvent.icon} <strong>{gameState.pendingEvent.title}</strong> · demand x{gameState.pendingEvent.demandFactor}. {gameState.pendingEvent.text}</p>
           ) : (
-            <p className="text-muted-foreground">🗞️ Tomorrow: a quiet day on the gum beat. No surprises forecast.</p>
+            <p className="text-muted-foreground line-clamp-3 sm:line-clamp-1">🗞️ Tomorrow: a quiet day on the gum beat. No surprises forecast.</p>
           )}
         </div>
 

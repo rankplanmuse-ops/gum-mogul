@@ -482,6 +482,19 @@ export const refillLines = (state: GameState): RefillLine[] => {
       const want = Math.ceil(forecastDemand(state, p) * factor);
       let qty = Math.min(Math.max(0, want - (stock.get(p.id) ?? 0)), room);
       while (qty > 0 && p.costPrice * qty * (1 - bulkDiscountFor(qty)) > cash) qty -= 1;
+      // Bulk-tier optimisation: when an order lands just under a discount
+      // tier (25 / 50 / 100), round UP to the tier if jar room and cash
+      // allow. The extra gums are the cheapest you will ever buy them,
+      // and they shrink the next refill. Highest tier wins.
+      if (qty > 0) {
+        for (const tierQty of [25, 50, 100]) {
+          if (qty < tierQty && tierQty - qty <= Math.max(5, qty * 0.35)
+            && tierQty <= qty + room
+            && p.costPrice * tierQty * (1 - bulkDiscountFor(tierQty)) <= cash) {
+            qty = tierQty;
+          }
+        }
+      }
       if (qty > 0) {
         const cost = p.costPrice * qty * (1 - bulkDiscountFor(qty));
         const prev = lines.get(p.id);
