@@ -166,10 +166,11 @@ const renderOvertureUrl = (): string => {
     if (i > fadeOutStart) buf[i] *= Math.max(0, 1 - (i - fadeOutStart) / (total - fadeOutStart));
   }
 
-  // Normalize QUIET: peak 0.42, background music should sit under the game
+  // Normalize QUIET: background music should sit well under the game.
+  // Peak 0.20 in the render and element volume 0.3 on top of that.
   let peak = 0;
   for (const v of buf) peak = Math.max(peak, Math.abs(v));
-  const gain = 0.42 / Math.max(peak, 0.001);
+  const gain = 0.20 / Math.max(peak, 0.001);
 
   const bytes = new Uint8Array(44 + total * 2);
   const view = new DataView(bytes.buffer);
@@ -219,7 +220,7 @@ class Soundtrack {
         this.url = renderOvertureUrl();
         this.audio = new Audio(this.url);
         this.audio.loop = true;
-        this.audio.volume = 0.4;
+        this.audio.volume = 0.3;
         this.audio.preload = "auto";
         this.rendering = false;
         if (this.wantPlay) {

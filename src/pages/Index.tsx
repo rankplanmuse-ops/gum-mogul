@@ -222,18 +222,11 @@ const Index = () => {
             </div>
             <CostBreakdownPanel costs={breakdownCosts} title={gameState.lastDay ? `Yesterday (Day ${gameState.day - 1}) in numbers` : "Today, forecast"} lnShare={gameState.lastDay ? gameState.lastDay.lnShare : hasUpgrade(gameState, "ln-terminal") ? 0.45 : 0} />
           </div>
-          <div className="space-y-6">
-            <ProductInventory
-              gameState={gameState}
-              onPurchase={(id, qty, method) => apply(purchaseStock(gameState, id, qty, method))}
-              onPriceChange={(id, price) => setGameState((s) => ({ ...s, products: s.products.map((p) => (p.id === id ? { ...p, sellPrice: price } : p)) }))}
-            />
-            <BankPanel
-              gameState={gameState}
-              onTakeLoan={(tierId) => apply(takeLoan(gameState, tierId))}
-              onRepay={(amount) => apply(repayLoan(gameState, amount))}
-            />
-          </div>
+          <ProductInventory
+            gameState={gameState}
+            onPurchase={(id, qty, method) => apply(purchaseStock(gameState, id, qty, method))}
+            onPriceChange={(id, price) => setGameState((s) => ({ ...s, products: s.products.map((p) => (p.id === id ? { ...p, sellPrice: price } : p)) }))}
+          />
         </div>
 
         <EmpirePanel
@@ -255,6 +248,12 @@ const Index = () => {
         />
 
         <InsightsPanel gameState={gameState} />
+
+        <BankPanel
+          gameState={gameState}
+          onTakeLoan={(tierId) => apply(takeLoan(gameState, tierId))}
+          onRepay={(amount) => apply(repayLoan(gameState, amount))}
+        />
 
         <footer className="text-center text-sm font-bold text-muted-foreground pb-4 space-y-3">
           <p>Gum Mogul is free and open source software (MIT). The sats in game are simulated; the Lightning Network it teaches is very real. ⚡</p>
