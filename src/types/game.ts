@@ -94,6 +94,8 @@ export interface GameState {
   upgrades: Upgrade[];
   marketingSpend: number;
   promoDays: Record<string, number>; // marketing channel id -> days of boost left
+  bankLoan: number; // USD still owed to the Gum Bank, 0 = no loan
+  bankLoanTier: string | null;
   restockLevel: string; // id into RESTOCK_LEVELS, used by the Restock Bot
   taxRate: number;
   depreciationRate: number;

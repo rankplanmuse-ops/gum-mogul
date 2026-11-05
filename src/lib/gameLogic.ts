@@ -52,6 +52,56 @@ export const MARKETING_CHANNELS: MarketingChannel[] = [
 export const promoFactor = (s: GameState): number =>
   MARKETING_CHANNELS.reduce((f, c) => ((s.promoDays?.[c.id] ?? 0) > 0 ? f * c.factor : f), 1);
 
+export interface LoanTier {
+  id: string;
+  name: string;
+  emoji: string;
+  amount: number;
+  interest: number; // flat, added to what you owe
+  requiresRevenue: number; // lifetime revenue needed to qualify
+  blurb: string;
+}
+
+// Gum Bank loans: cash now, repaid automatically from 10% of daily revenue
+// (manual repayments any time). One loan at a time. Owed counts against
+// net worth, so borrowing to buy machines is a real decision.
+export const LOAN_TIERS: LoanTier[] = [
+  { id: "starter", name: "Starter Loan", emoji: "🐷", amount: 250, interest: 0.2, requiresRevenue: 0, blurb: "Anyone qualifies. Pricey money for tight spots." },
+  { id: "growth", name: "Growth Loan", emoji: "📈", amount: 1000, interest: 0.15, requiresRevenue: 500, blurb: "Needs $500 lifetime revenue. The expansion classic." },
+  { id: "mogul", name: "Mogul Loan", emoji: "🏦", amount: 5000, interest: 0.1, requiresRevenue: 5000, blurb: "Needs $5,000 lifetime revenue. Best rate, kiosk money." },
+];
+
+export const takeLoan = (state: GameState, tierId: string): ActionResult => {
+  const tier = LOAN_TIERS.find((t) => t.id === tierId);
+  if (!tier) return { state, ok: false, message: "Unknown loan" };
+  if ((state.bankLoan ?? 0) > 0) return { state, ok: false, message: "One loan at a time: clear the current one first" };
+  if (state.totalRevenue < tier.requiresRevenue) return { state, ok: false, message: `${tier.name} needs $${tier.requiresRevenue.toLocaleString()} lifetime revenue (you have $${Math.floor(state.totalRevenue).toLocaleString()})` };
+  const s = { ...state, log: [...state.log] };
+  const owed = Math.round(tier.amount * (1 + tier.interest));
+  s.cash += tier.amount;
+  s.bankLoan = owed;
+  s.bankLoanTier = tier.id;
+  pushLog(s, tier.emoji, `${tier.name} approved: $${tier.amount.toLocaleString()} in the till. You owe $${owed.toLocaleString()} (interest included), repaid from 10% of daily revenue.`, "info");
+  return { state: s, ok: true, message: `${tier.name}: $${tier.amount.toLocaleString()} borrowed` };
+};
+
+export const repayLoan = (state: GameState, amount: number): ActionResult => {
+  const owed = state.bankLoan ?? 0;
+  if (owed <= 0) return { state, ok: false, message: "No loan to repay" };
+  const pay = Math.min(amount, owed, state.cash);
+  if (pay <= 0) return { state, ok: false, message: "No spare cash to repay with" };
+  const s = { ...state, log: [...state.log] };
+  s.cash -= pay;
+  s.bankLoan = owed - pay;
+  if (s.bankLoan <= 0.005) {
+    s.bankLoan = 0;
+    s.bankLoanTier = null;
+    pushLog(s, "🎉", "Bank loan fully repaid. The Gum Bank stamps your file: RELIABLE.", "unlock");
+    return { state: s, ok: true, message: "Loan fully repaid 🎉" };
+  }
+  return { state: s, ok: true, message: `Repaid $${pay.toFixed(2)} ($${s.bankLoan.toFixed(2)} left)` };
+};
+
 // Bulk buying: the supplier rewards bigger orders. Applies to cash and sats
 // payments; the Lightning 8% comes on top when paying in sats.
 export const BULK_TIERS: { minQty: number; discount: number }[] = [
@@ -165,6 +215,8 @@ export const freshState = (): GameState => ({
   upgrades: INITIAL_UPGRADES.map((u) => ({ ...u })),
   marketingSpend: 3,
   promoDays: {},
+  bankLoan: 0,
+  bankLoanTier: null,
   restockLevel: "standard",
   taxRate: 0.15,
   depreciationRate: 0.01,
@@ -212,7 +264,8 @@ export const netWorth = (s: GameState) =>
   s.sats / SATS_PER_USD +
   totalMachines(s) * s.machineValueEach +
   s.products.reduce((n, p) => n + p.stock * p.costPrice, 0) -
-  s.lnLoanSats / SATS_PER_USD;
+  s.lnLoanSats / SATS_PER_USD -
+  (s.bankLoan ?? 0);
 
 export const priceFactor = (p: Product) => {
   const f = Math.pow(p.refPrice / Math.max(0.01, p.sellPrice), 1.6);
@@ -519,6 +572,18 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   s.cash += revenue - lnRevenue - rent - s.marketingSpend - cardFees - tax;
   s.machineValueEach = Math.max(100, s.machineValueEach - s.machineValueEach * s.depreciationRate);
   s.totalRevenue += revenue;
+
+  // Gum Bank auto-repayment: 10% of today's revenue, straight off the loan.
+  if ((s.bankLoan ?? 0) > 0 && revenue > 0) {
+    const payment = Math.min(s.bankLoan, revenue * 0.1);
+    s.cash -= payment;
+    s.bankLoan -= payment;
+    if (s.bankLoan <= 0.005) {
+      s.bankLoan = 0;
+      s.bankLoanTier = null;
+      pushLog(s, "🎉", "The daily skim just paid off your bank loan in full.", "unlock");
+    }
+  }
 
   // Reputation: empty slots hurt, fair prices and full jars help.
   let rep = s.reputation;

@@ -28,6 +28,9 @@ locations, survive random events, and stack sats through a built-in
   Bulk supplier discounts (25+ gums 5% off, 50+ 10%, 100+ 15%) and a
   Restock Bot with four fill levels (Lean, Standard, Loaded, Max Out)
   reward players who plan their working capital.
+- **Real financing:** the Gum Bank lends $250 / $1,000 / $5,000 at flat
+  interest, auto-repaid from 10% of daily revenue, with the balance
+  counted against your net worth, alongside the Lightning rescue loan.
 - **A living market:** reputation, daily random events (viral videos,
   heatwaves, rival machines), stockouts that cost you customers, and a
   demand forecast for every product.
@@ -46,10 +49,11 @@ locations, survive random events, and stack sats through a built-in
   diary, auto-save to your browser, and auto-play for idle moguls.
   Built for phones too: a one-tap Refill jars button sits under Next
   Day, and on mobile both stick to the bottom of the screen.
-- **Original 8-bit soundtrack:** a Game Boy style chiptune (square lead,
-  triangle bass, noise hats) rendered from code to a tiny WAV in your
-  browser and looped from the speaker button. No audio files ship
-  with the game, nothing sampled: the loop is code.
+- **Original orchestral soundtrack:** the Gum Mogul Overture, a
+  3-minute piece (strings, piano, flute lead, cello bridge,
+  glockenspiel reprise; 72 bars at 96 BPM) rendered from code to a
+  WAV in your browser and looped from the speaker button at a gentle
+  volume. No audio files ship with the game: the score is the code.
 
 ## Run it
 

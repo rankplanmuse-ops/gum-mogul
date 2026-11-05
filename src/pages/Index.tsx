@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { VendingMachine } from "@/components/VendingMachine";
 import { FinancialDashboard } from "@/components/FinancialDashboard";
 import { ProductInventory } from "@/components/ProductInventory";
+import { BankPanel } from "@/components/BankPanel";
 import { CostBreakdownPanel } from "@/components/CostBreakdownPanel";
 import { LightningWalletPanel } from "@/components/LightningWalletPanel";
 import { EmpirePanel } from "@/components/EmpirePanel";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { GameState } from "@/types/game";
 import {
   freshState, processDayEnd, purchaseStock, buyMachine, unlockLocation, buyUpgrade,
-  zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock, refillLines, refillJars, buyMarketing,
+  zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock, refillLines, refillJars, buyMarketing, takeLoan, repayLoan,
   stockCapacity, totalMachines, hasUpgrade, SAVE_KEY, ActionResult,
 } from "@/lib/gameLogic";
 import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX } from "lucide-react";
@@ -72,13 +73,14 @@ const Index = () => {
 
   useEffect(() => {
     chiptune.onBlocked = () => { setMusicOn(false); toast.error("🎵 The browser blocked the music. Tap the speaker again."); };
-    return () => { chiptune.onBlocked = null; };
+    chiptune.onComposing = () => { toast.info("🎼 Composing your 3-minute overture, one moment..."); };
+    return () => { chiptune.onBlocked = null; chiptune.onComposing = null; };
   }, []);
 
   const toggleMusic = () => {
     const nowOn = chiptune.toggle();
     setMusicOn(nowOn);
-    if (nowOn) toast.success("🎵 8-bit soundtrack on");
+    if (nowOn) toast.success("🎵 Gum Mogul Overture on (3 minutes, orchestral)");
     try { localStorage.setItem(MUSIC_PREF_KEY, nowOn ? "on" : "off"); } catch { /* ignore */ }
   };
   const stateRef = useRef(gameState);
@@ -178,7 +180,7 @@ const Index = () => {
               <p>4. <strong>Grow.</strong> Unlock flavours at revenue milestones, open new locations, add machines, buy upgrades.</p>
               <p>5. <strong>Go Lightning ⚡.</strong> The $150 terminal lets customers pay in sats: instant, fee free. Pay suppliers in sats for 8% off, run zap promos, and if cash runs dry, a Lightning rescue loan can save the run.</p>
               <p>6. <strong>Do not go broke.</strong> Three days in a row with negative cash ends the game. Your progress auto-saves in this browser.</p>
-              <p>🎵 <strong>Soundtrack:</strong> the speaker button (bottom right) plays an original 8-bit chiptune, synthesized live in your browser, Game Boy style. No audio files.</p>
+              <p>🎵 <strong>Soundtrack:</strong> the speaker button (bottom right) plays the Gum Mogul Overture, an original 3-minute orchestral piece rendered from code in your browser. Strings, piano, flute, the works. No audio files.</p>
             </div>
           )}
         </header>
@@ -219,11 +221,18 @@ const Index = () => {
             </div>
             <CostBreakdownPanel costs={breakdownCosts} title={gameState.lastDay ? `Yesterday (Day ${gameState.day - 1}) in numbers` : "Today, forecast"} lnShare={gameState.lastDay ? gameState.lastDay.lnShare : hasUpgrade(gameState, "ln-terminal") ? 0.45 : 0} />
           </div>
-          <ProductInventory
-            gameState={gameState}
-            onPurchase={(id, qty, method) => apply(purchaseStock(gameState, id, qty, method))}
-            onPriceChange={(id, price) => setGameState((s) => ({ ...s, products: s.products.map((p) => (p.id === id ? { ...p, sellPrice: price } : p)) }))}
-          />
+          <div className="space-y-6">
+            <ProductInventory
+              gameState={gameState}
+              onPurchase={(id, qty, method) => apply(purchaseStock(gameState, id, qty, method))}
+              onPriceChange={(id, price) => setGameState((s) => ({ ...s, products: s.products.map((p) => (p.id === id ? { ...p, sellPrice: price } : p)) }))}
+            />
+            <BankPanel
+              gameState={gameState}
+              onTakeLoan={(tierId) => apply(takeLoan(gameState, tierId))}
+              onRepay={(amount) => apply(repayLoan(gameState, amount))}
+            />
+          </div>
         </div>
 
         <EmpirePanel
