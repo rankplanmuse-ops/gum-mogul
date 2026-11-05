@@ -208,9 +208,6 @@ const Index = () => {
                 <Button onClick={() => setIsAutoPlaying(!isAutoPlaying)} variant={isAutoPlaying ? "destructive" : "secondary"} className="flex-1 h-14 text-lg rounded-full font-black gap-2">
                   <FastForward className="h-5 w-5" /> {isAutoPlaying ? "Stop Auto" : "Auto Play"}
                 </Button>
-                <Button onClick={handleReset} variant="outline" className="h-14 rounded-full gap-2 font-black px-5" title="Reset game: wipe the save and start over">
-                  <RotateCcw className="h-5 w-5" /> Reset game
-                </Button>
               </div>
               <Button onClick={() => apply(refillJars(gameState))} disabled={refillUnits === 0 || gameState.gameOver} variant="secondary" className="w-full h-12 rounded-full font-black gap-2 border-2 border-teal-300 bg-teal-50 text-teal-900">
                 🧃 Refill jars{refillUnits > 0 ? `: ${refillUnits} gums for $${refillCost.toFixed(2)}` : " (already at forecast)"}
@@ -245,8 +242,11 @@ const Index = () => {
 
         <InsightsPanel gameState={gameState} />
 
-        <footer className="text-center text-sm font-bold text-muted-foreground pb-4">
-          Gum Mogul is free and open source software (MIT). The sats in game are simulated; the Lightning Network it teaches is very real. ⚡
+        <footer className="text-center text-sm font-bold text-muted-foreground pb-4 space-y-3">
+          <p>Gum Mogul is free and open source software (MIT). The sats in game are simulated; the Lightning Network it teaches is very real. ⚡</p>
+          <Button onClick={handleReset} variant="outline" className="rounded-full gap-2 font-black" title="Reset game: wipe the save and start over">
+            <RotateCcw className="h-4 w-4" /> Reset game
+          </Button>
         </footer>
       </div>
 
