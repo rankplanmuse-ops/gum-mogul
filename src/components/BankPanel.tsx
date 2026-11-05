@@ -61,7 +61,7 @@ export const BankPanel = ({ gameState, onTakeLoan, onRepay }: Props) => {
         </div>
       )}
       <p className="text-[11px] font-bold text-muted-foreground mt-3">
-        Broke with a Lightning Terminal? The one-time Lightning rescue loan in the wallet below is separate, and faster.
+        Broke with a Lightning Terminal? The one-time Lightning rescue loan in the wallet above is separate, and faster.
       </p>
     </Card>
   );
