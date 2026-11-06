@@ -205,7 +205,7 @@ const Index = () => {
       {/* Mobile sticky action bar: the whole game loop without scrolling.
           Floats directly above the iOS tab bar. */}
       <div className="fixed bottom-[calc(3.55rem+env(safe-area-inset-bottom))] inset-x-0 z-40 lg:hidden bg-white/92 backdrop-blur border-t-2 px-3 pt-2 pb-2 flex gap-2">
-        <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-1 h-12 rounded-full font-black gap-1.5">
+        <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-[1.4] h-12 rounded-full font-black gap-1.5 shadow-[0_6px_16px_rgba(219,39,119,0.4)]">
           <Play className="h-5 w-5" /> Next Day
         </Button>
         <Button onClick={() => apply(refillJars(gameState))} disabled={refillUnits === 0 || gameState.gameOver} variant="secondary" className="flex-1 h-12 rounded-full font-black gap-1.5 border-2 border-teal-300 bg-teal-50 text-teal-900">
@@ -254,7 +254,7 @@ const Index = () => {
           </button>
           {showHelp && (
             <div className="max-w-2xl mx-auto text-left bg-white/85 backdrop-blur rounded-3xl border-[3px] p-5 text-sm font-semibold space-y-2 animate-pop">
-              <p>1. <strong>Stock the jars.</strong> Buy gum before customers arrive, or tap <strong>🧃 Refill jars</strong> right under the Next Day button to top everything up to forecast in one go (bulk discounts included). Empty slots lose sales and reputation. On mobile the Next Day and Refill buttons stick to the bottom of the screen.</p>
+              <p>1. <strong>Stock the jars.</strong> Buy gum before customers arrive, or tap <strong>🧃 Refill jars</strong> right under the Next Day button to fill every jar in one go (bulk discounts included). Empty slots lose sales and reputation. On mobile the Next Day and Refill buttons stick to the bottom of the screen.</p>
               <p>2. <strong>Set prices.</strong> The slider bends demand: deals sell fast, greedy prices sell slow and dent your reputation.</p>
               <p>3. <strong>Hit Next Day.</strong> Sales land, rent, marketing, card fees and tax leave. Watch the diary for events.</p>
               <p>4. <strong>Grow.</strong> Unlock flavours at revenue milestones, open new locations, add machines, buy upgrades.</p>
@@ -289,10 +289,10 @@ const Index = () => {
             <VendingMachine gumCount={totalStock(gameState)} capacity={stockCapacity(gameState)} machines={totalMachines(gameState)} tickerText={hasUpgrade(gameState, "displays") ? gameState.products.filter((p) => p.unlocked).map((p) => `${p.emoji} ${p.name.toUpperCase()} $${p.sellPrice.toFixed(2)}`).join(" · ") + " · PAY WITH LIGHTNING ⚡ NO CARD FEES" : undefined} />
             <div className="order-first lg:order-none space-y-3">
               <div className="flex gap-3">
-                <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-1 h-14 text-lg rounded-full font-black gap-2 shadow-lg">
+                <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-[1.7] h-14 text-lg rounded-full font-black gap-2 shadow-[0_10px_24px_rgba(219,39,119,0.45)] ring-4 ring-pink-300/50">
                   <Play className="h-5 w-5" /> Next Day
                 </Button>
-                <Button onClick={() => setIsAutoPlaying(!isAutoPlaying)} variant={isAutoPlaying ? "destructive" : "secondary"} className="flex-1 h-14 text-lg rounded-full font-black gap-2">
+                <Button onClick={() => setIsAutoPlaying(!isAutoPlaying)} variant={isAutoPlaying ? "destructive" : "outline"} className="flex-1 h-14 text-base rounded-full font-black gap-2 bg-white/60 text-slate-600">
                   <FastForward className="h-5 w-5" /> {isAutoPlaying ? "Stop Auto" : "Auto Play"}
                 </Button>
               </div>
