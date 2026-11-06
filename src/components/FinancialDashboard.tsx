@@ -11,7 +11,7 @@ interface Props {
 
 const compactMoney = (n: number): string => {
   if (n >= 1_000_000) return `$${parseFloat((n / 1_000_000).toFixed(2))}M`;
-  if (n >= 10_000) return `$${parseFloat((n / 1_000).toFixed(1))}k`;
+  if (n >= 1_000) return `$${parseFloat((n / 1_000).toFixed(1))}k`;
   return formatCurrency(n);
 };
 
@@ -57,7 +57,7 @@ export const FinancialDashboard = ({ gameState, dailyProfit }: Props) => {
           Reward at {compactMoney(next.threshold)}: {compactMoney(next.cashReward)} + {next.satsReward.toLocaleString()} sats · Forecast profit today: {formatCurrency(dailyProfit)}
         </p>
         <Progress value={pct} className="mt-3 h-4 bg-white/30 [&>div]:bg-white" />
-        <div className="flex flex-nowrap gap-1.5 mt-3 overflow-x-auto h-7 items-center [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex flex-nowrap gap-1.5 mt-3 overflow-x-auto h-7 items-center pr-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_88%,transparent_100%)]">
           {ladder.map((m, i) => (
             <span key={m.threshold} className={`text-[11px] font-black rounded-full px-2.5 py-1 shrink-0 whitespace-nowrap ${i < claimed ? "bg-white text-pink-600" : i === claimed ? "bg-black/25 text-white ring-2 ring-white" : "bg-white/20 text-white/70"}`}>
               {i < claimed ? "✅" : m.emoji} {m.title} {compactMoney(m.threshold)}
