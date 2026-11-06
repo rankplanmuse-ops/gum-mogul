@@ -9,6 +9,12 @@ interface Props {
   dailyProfit: number;
 }
 
+const compactMoney = (n: number): string => {
+  if (n >= 1_000_000) return `$${parseFloat((n / 1_000_000).toFixed(2))}M`;
+  if (n >= 10_000) return `$${parseFloat((n / 1_000).toFixed(1))}k`;
+  return formatCurrency(n);
+};
+
 export const FinancialDashboard = ({ gameState, dailyProfit }: Props) => {
   const worth = netWorth(gameState);
   const next = nextMilestone(gameState);
@@ -43,20 +49,20 @@ export const FinancialDashboard = ({ gameState, dailyProfit }: Props) => {
           <Crown className="h-8 w-8 animate-floaty shrink-0" />
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-widest text-white/80 whitespace-nowrap overflow-hidden text-ellipsis">Next milestone: {next.title} · your rank: {currentRank(gameState)}</p>
-            <p className="text-lg sm:text-2xl font-black tabular-nums tracking-tight whitespace-nowrap overflow-hidden">Net worth {formatCurrency(worth)} <span className="text-white/70 text-sm sm:text-base font-bold">of {formatCurrency(next.threshold)}</span></p>
+            <p className="text-lg sm:text-2xl font-black tabular-nums tracking-tight whitespace-nowrap overflow-hidden">Net worth {formatCurrency(worth)} <span className="text-white/70 text-sm sm:text-base font-bold">of {compactMoney(next.threshold)}</span></p>
           </div>
         </div>
         <p className="text-[13px] sm:text-sm font-bold bg-white/25 rounded-full px-3 py-1 mt-3 whitespace-nowrap overflow-hidden text-ellipsis">
-          Reward at {formatCurrency(next.threshold)}: {formatCurrency(next.cashReward)} + {next.satsReward.toLocaleString()} sats · Forecast profit today: {formatCurrency(dailyProfit)}
+          Reward at {compactMoney(next.threshold)}: {compactMoney(next.cashReward)} + {next.satsReward.toLocaleString()} sats · Forecast profit today: {formatCurrency(dailyProfit)}
         </p>
         <Progress value={pct} className="mt-3 h-4 bg-white/30 [&>div]:bg-white" />
-        <div className="flex flex-nowrap gap-1.5 mt-3 overflow-hidden h-7 items-center">
+        <div className="flex flex-nowrap gap-1.5 mt-3 overflow-x-auto h-7 items-center [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {ladder.map((m, i) => (
-            <span key={m.threshold} className={`text-[11px] font-black rounded-full px-2.5 py-1 ${i < claimed ? "bg-white text-pink-600" : i === claimed ? "bg-black/25 text-white ring-2 ring-white" : "bg-white/20 text-white/70"}`}>
-              {i < claimed ? "✅" : m.emoji} {m.title} {formatCurrency(m.threshold)}
+            <span key={m.threshold} className={`text-[11px] font-black rounded-full px-2.5 py-1 shrink-0 whitespace-nowrap ${i < claimed ? "bg-white text-pink-600" : i === claimed ? "bg-black/25 text-white ring-2 ring-white" : "bg-white/20 text-white/70"}`}>
+              {i < claimed ? "✅" : m.emoji} {m.title} {compactMoney(m.threshold)}
             </span>
           ))}
-          <span className="text-[11px] font-black rounded-full px-2.5 py-1 bg-white/20 text-white/70">… x10 forever</span>
+          <span className="text-[11px] font-black rounded-full px-2.5 py-1 shrink-0 whitespace-nowrap bg-white/20 text-white/70">… x10 forever</span>
         </div>
       </Card>
     </div>
