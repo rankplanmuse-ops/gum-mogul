@@ -89,7 +89,7 @@ export const LightningWalletPanel = ({ gameState, onReceive, onZapPromo, onSellS
 
         <div className="rounded-2xl border-[3px] border-dashed border-amber-300 p-4">
           <h3 className="font-black flex items-center gap-2"><QrCode className="h-5 w-5 text-amber-500" /> Create a Lightning invoice</h3>
-          <p className="text-xs font-semibold text-muted-foreground mt-1">This is how Lightning payments start: you make an invoice, the payer scans it. Try the full flow, simulated safely in game.</p>
+          <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed mt-1">This is how Lightning payments start: you make an invoice, the payer scans it. Try the full flow, simulated safely in game.</p>
           <div className="flex gap-2 mt-3">
             <Input type="number" value={amount} min={1} onChange={(e) => setAmount(Math.max(1, parseInt(e.target.value) || 0))} className="w-28 rounded-full" />
             <Input value={memo} onChange={(e) => setMemo(e.target.value)} className="flex-1 rounded-full" placeholder="Memo" />
@@ -112,7 +112,7 @@ export const LightningWalletPanel = ({ gameState, onReceive, onZapPromo, onSellS
                     {paid ? "✅ Settled!" : paying ? "⚡ Settling…" : "Simulate a customer paying it"}
                   </Button>
                 </div>
-                <p className="text-xs font-semibold text-muted-foreground mt-2">Real invoices start with lnbc too, and any Lightning wallet in the world could pay one.</p>
+                <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed mt-2">Real invoices start with lnbc too, and any Lightning wallet in the world could pay one.</p>
               </div>
             </div>
           )}

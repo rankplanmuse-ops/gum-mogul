@@ -47,7 +47,7 @@ export const CostBreakdownPanel = ({ costs, title, lnShare }: Props) => {
         </div>
       </div>
       <div className="mt-5 p-4 bg-muted rounded-2xl">
-        <p className="text-xs font-semibold text-muted-foreground">
+        <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed">
           💡 Depreciation lowers your machines' value, not your cash. The cash that actually leaves is rent, marketing, card fees and tax. Stock is paid when you buy it, which is why restocking day feels expensive.
         </p>
       </div>

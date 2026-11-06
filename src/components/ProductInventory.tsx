@@ -85,7 +85,7 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
                 ) : margin / p.sellPrice <= 0.2 ? (
                   <p className="text-xs font-black text-amber-600 mt-1.5">🔥 SUPER DEAL: slim {Math.round((margin / p.sellPrice) * 100)}% margin, priced to fly. Volume is the profit.</p>
                 ) : null}
-                <p className="text-xs font-semibold text-muted-foreground mt-1">Forecast: ~{forecast} sold/day {low && <span className="text-loss font-black">· stock below forecast!</span>}</p>
+                <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed mt-1">Forecast: ~{forecast} sold/day {low && <span className="text-loss font-black">· stock below forecast!</span>}</p>
               </div>
 
               <div className="flex items-center gap-2 mt-4">

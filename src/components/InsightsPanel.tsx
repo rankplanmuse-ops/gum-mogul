@@ -38,7 +38,7 @@ export const InsightsPanel = ({ gameState }: { gameState: GameState }) => {
               <div key={a.id} className={`rounded-2xl p-3 border-2 ${got ? "bg-amber-50 border-amber-300 animate-pop" : "bg-muted/50 border-dashed opacity-60"}`}>
                 <p className="text-2xl">{got ? a.emoji : "🔒"}</p>
                 <p className="font-black text-sm leading-tight">{a.name}</p>
-                <p className="text-[11px] font-semibold text-muted-foreground">{a.desc}</p>
+                <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed">{a.desc}</p>
               </div>
             );
           })}

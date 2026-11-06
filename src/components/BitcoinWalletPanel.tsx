@@ -32,7 +32,7 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
       <h3 className="font-black text-lg flex items-center gap-2">
         <Bitcoin className="h-5 w-5 text-amber-600" /> Bitcoin Vault: self-custody, on-chain
       </h3>
-      <p className="text-xs font-bold text-muted-foreground mt-1">
+      <p className="text-[13px] font-bold text-muted-foreground mt-1 leading-relaxed">
         Turn fiat profits into bitcoin you actually hold. No exchange account, no custodian: every buy lands in your own wallet as a UTXO, and you manage those UTXOs like a grown-up bitcoiner.
       </p>
 
@@ -70,9 +70,9 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
             return (
               <div key={r.id} className="bg-white/80 rounded-2xl border-2 p-3">
                 <p className="font-black text-sm">{r.emoji} {r.name} {r.kyc && <span className="text-[10px] bg-rose-100 text-rose-700 rounded-full px-2 py-0.5 align-middle">KYC</span>}</p>
-                <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">{r.blurb}</p>
+                <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed mt-0.5">{r.blurb}</p>
                 <p className="text-[11px] font-black text-amber-700 mt-1">Fee {(r.feePct * 100).toFixed(1)}% · you receive about {received.toLocaleString()} sats</p>
-                <p className="text-[11px] font-semibold text-muted-foreground mt-1">{r.riskNote}</p>
+                <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed mt-1">{r.riskNote}</p>
                 <Button onClick={() => onBuyBtc(r.id, usd)} disabled={usd < 10 || gameState.cash < usd} className="w-full rounded-full font-black mt-2 h-9">
                   Buy {formatCurrency(usd)} of BTC
                 </Button>
@@ -84,7 +84,7 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
 
       <div className="mt-4 bg-white/80 rounded-2xl border-2 p-3">
         <p className="text-sm font-black">🔄 Sweep Lightning sats on-chain</p>
-        <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">Lightning is for spending; on-chain is for saving. Sweeping costs a 1% swap fee plus the chain fee, and lands as one clean UTXO. Minimum 10,000 sats: tiny UTXOs cost more to spend later than they are worth.</p>
+        <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed mt-0.5">Lightning is for spending; on-chain is for saving. Sweeping costs a 1% swap fee plus the chain fee, and lands as one clean UTXO. Minimum 10,000 sats: tiny UTXOs cost more to spend later than they are worth.</p>
         <div className="flex gap-2 mt-2 flex-wrap">
           {[10000, 50000, 250000].map((v) => (
             <Button key={v} variant="secondary" onClick={() => onSweep(v)} disabled={gameState.sats < v} className="rounded-full font-black min-h-9">Sweep {v.toLocaleString()}</Button>
@@ -95,7 +95,7 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
 
       <div className="mt-4">
         <p className="text-sm font-black flex items-center gap-1.5"><Layers className="h-4 w-4 text-amber-600" /> Your UTXOs</p>
-        <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">
+        <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed mt-0.5">
           Every receive is a separate coin. Spending later pays a fee per input, so 20 small UTXOs can cost a fortune to move when fees spike. Consolidate them into one while fees are low, and never mix KYC coins with clean ones unless you accept the whole output becoming identity-linked.
         </p>
         {utxos.length === 0 ? (
@@ -118,7 +118,7 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
 
       <div className="mt-4 bg-white/80 rounded-2xl border-2 p-3">
         <p className="text-sm font-black flex items-center gap-1.5"><Pickaxe className="h-4 w-4 text-amber-600" /> Mining as a service</p>
-        <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">
+        <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed mt-0.5">
           No KYC route that PRINTS bitcoin: a hosting company runs your machines. First machine {formatCurrency(MINING_EQUIPMENT_COST)}, then {formatCurrency(MINING_MONTHLY_FEE)}/month per machine in power and hosting, billed daily and shown in your P&L. Add as many machines as you like: every new one costs 15% more rack space, and fees and expected payouts scale with the fleet. Machines are payable in cash or in sats: paying over Lightning takes 8% off the price. Payouts land weekly in your wallet and swing hard with difficulty and uptime. Needs {formatCurrency(MINING_REQUIRES_REVENUE)} lifetime revenue to start.
         </p>
         {gameState.miningOwned ? (

@@ -22,7 +22,7 @@ export const BankPanel = ({ gameState, onTakeLoan, onRepay }: Props) => {
       <h3 className="font-black text-lg flex items-center gap-2">
         <Landmark className="h-5 w-5 text-indigo-600" /> Gum Bank
       </h3>
-      <p className="text-xs font-bold text-muted-foreground mt-1">
+      <p className="text-[13px] font-bold text-muted-foreground mt-1 leading-relaxed">
         Borrow for machines, locations or stock. You can run several loans at once: the bank lends up to {Math.round(LOAN_LTV * 100)}% of your asset value across all of them (max {MAX_LOANS}). Everything you owe is skimmed from 10% of daily revenue, oldest loan first, and counts against your net worth.
       </p>
 
@@ -58,7 +58,7 @@ export const BankPanel = ({ gameState, onTakeLoan, onRepay }: Props) => {
               <div className="text-3xl">{tier.emoji}</div>
               <div className="min-w-0 flex-1">
                 <p className="font-black text-sm">{tier.name}: {formatCurrency(tier.amount)}</p>
-                <p className="text-[11px] font-semibold text-muted-foreground">
+                <p className="text-[13px] font-semibold text-muted-foreground leading-relaxed">
                   {tier.blurb} You repay {formatCurrency(tier.amount * (1 + tier.interest))} total.
                 </p>
                 {blocker !== null && (
