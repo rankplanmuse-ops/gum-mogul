@@ -85,6 +85,7 @@ export interface LastDaySummary {
   marketing: number;
   depreciation: number;
   cardFees: number;
+  miningFees: number;
   tax: number;
   netProfit: number;
   satsEarned: number;
@@ -155,6 +156,7 @@ export interface CostBreakdown {
   marketing: number;
   depreciation: number;
   cardFees: number;
+  miningFees: number;
   tax: number;
   netProfit: number;
 }

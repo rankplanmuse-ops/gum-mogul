@@ -16,6 +16,7 @@ export const CostBreakdownPanel = ({ costs, title, lnShare }: Props) => {
     { label: "Rent", amount: -costs.rent, positive: false },
     { label: "Marketing", amount: -costs.marketing, positive: false },
     { label: "Card fees (2.9% on card sales)", amount: -costs.cardFees, positive: false },
+    ...(costs.miningFees > 0 ? [{ label: "Mining hosting & power", amount: -costs.miningFees, positive: false }] : []),
     { label: "Depreciation (machine wear)", amount: -costs.depreciation, positive: false },
     { label: "Tax (15% of profit)", amount: -costs.tax, positive: false },
   ];

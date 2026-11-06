@@ -182,7 +182,7 @@ const Index = () => {
   };
 
   const breakdownCosts = gameState.lastDay
-    ? { revenue: gameState.lastDay.revenue, productCost: gameState.lastDay.productCost, rent: gameState.lastDay.rent, marketing: gameState.lastDay.marketing, depreciation: gameState.lastDay.depreciation, cardFees: gameState.lastDay.cardFees, tax: gameState.lastDay.tax, netProfit: gameState.lastDay.netProfit }
+    ? { revenue: gameState.lastDay.revenue, productCost: gameState.lastDay.productCost, rent: gameState.lastDay.rent, marketing: gameState.lastDay.marketing, depreciation: gameState.lastDay.depreciation, cardFees: gameState.lastDay.cardFees, miningFees: gameState.lastDay.miningFees ?? 0, tax: gameState.lastDay.tax, netProfit: gameState.lastDay.netProfit }
     : costs;
 
   return (
@@ -337,7 +337,7 @@ const Index = () => {
             onBuyBtc={(routeId, usd) => apply(buyBtc(gameState, routeId, usd))}
             onSweep={(amount) => apply(sweepLightningToChain(gameState, amount))}
             onConsolidate={() => apply(consolidateUtxos(gameState))}
-            onBuyMining={() => apply(buyMiningRig(gameState))}
+            onBuyMining={(payWithSats: boolean) => apply(buyMiningRig(gameState, payWithSats))}
             onToggleMining={() => apply(toggleMining(gameState))}
           />
         </div>
