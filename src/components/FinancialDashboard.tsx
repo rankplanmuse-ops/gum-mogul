@@ -25,11 +25,11 @@ export const FinancialDashboard = ({ gameState, dailyProfit }: Props) => {
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((st) => (
-          <Card key={st.label} className="bubbly-card p-4 sm:p-5 hover:-translate-y-1 transition-transform overflow-hidden">
-            <div className="flex items-center justify-between gap-2">
+          <Card key={st.label} className="bubbly-card p-4 sm:p-5 h-[5.75rem] sm:h-24 overflow-hidden">
+            <div className="flex items-center justify-between gap-2 h-full">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{st.label}</p>
-                <p className={`text-lg sm:text-2xl font-black tabular-nums tracking-tight leading-tight break-words ${st.cls}`}>{st.value}</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground whitespace-nowrap">{st.label}</p>
+                <p className={`text-base sm:text-2xl font-black tabular-nums tracking-tight leading-tight whitespace-nowrap overflow-hidden ${st.cls}`}>{st.value}</p>
               </div>
               <div className={`p-2.5 sm:p-3 rounded-full shrink-0 ${st.bg}`}>
                 <st.icon className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -39,20 +39,18 @@ export const FinancialDashboard = ({ gameState, dailyProfit }: Props) => {
         ))}
       </div>
       <Card className="bubbly-card p-5 bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400 text-white border-none">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-3">
-            <Crown className="h-8 w-8 animate-floaty" />
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-white/80">Next milestone: {next.title} · your rank: {currentRank(gameState)}</p>
-              <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tight">Net worth {formatCurrency(worth)} <span className="text-white/70 text-base font-bold">of {formatCurrency(next.threshold)}</span></p>
-            </div>
+        <div className="flex items-center gap-3">
+          <Crown className="h-8 w-8 animate-floaty shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-widest text-white/80 whitespace-nowrap overflow-hidden text-ellipsis">Next milestone: {next.title} · your rank: {currentRank(gameState)}</p>
+            <p className="text-lg sm:text-2xl font-black tabular-nums tracking-tight whitespace-nowrap overflow-hidden">Net worth {formatCurrency(worth)} <span className="text-white/70 text-sm sm:text-base font-bold">of {formatCurrency(next.threshold)}</span></p>
           </div>
-          <p className="text-sm font-bold bg-white/25 rounded-full px-3 py-1">
-            Reward at {formatCurrency(next.threshold)}: {formatCurrency(next.cashReward)} + {next.satsReward.toLocaleString()} sats · Forecast profit today: {formatCurrency(dailyProfit)}
-          </p>
         </div>
+        <p className="text-[13px] sm:text-sm font-bold bg-white/25 rounded-full px-3 py-1 mt-3 whitespace-nowrap overflow-hidden text-ellipsis">
+          Reward at {formatCurrency(next.threshold)}: {formatCurrency(next.cashReward)} + {next.satsReward.toLocaleString()} sats · Forecast profit today: {formatCurrency(dailyProfit)}
+        </p>
         <Progress value={pct} className="mt-3 h-4 bg-white/30 [&>div]:bg-white" />
-        <div className="flex flex-wrap gap-1.5 mt-3">
+        <div className="flex flex-nowrap gap-1.5 mt-3 overflow-hidden h-7 items-center">
           {ladder.map((m, i) => (
             <span key={m.threshold} className={`text-[11px] font-black rounded-full px-2.5 py-1 ${i < claimed ? "bg-white text-pink-600" : i === claimed ? "bg-black/25 text-white ring-2 ring-white" : "bg-white/20 text-white/70"}`}>
               {i < claimed ? "✅" : m.emoji} {m.title} {formatCurrency(m.threshold)}
