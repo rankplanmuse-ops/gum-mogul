@@ -48,7 +48,8 @@ export const FinancialDashboard = ({ gameState, dailyProfit }: Props) => {
         <div className="flex items-center gap-3">
           <Crown className="h-8 w-8 animate-floaty shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-widest text-white/80 whitespace-nowrap overflow-hidden text-ellipsis">Next milestone: {next.title} · your rank: {currentRank(gameState)}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-white/80 whitespace-nowrap overflow-hidden">Next milestone: {next.title}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-white/60 whitespace-nowrap overflow-hidden">Your rank: {currentRank(gameState)}</p>
             <p className="text-lg sm:text-2xl font-black tabular-nums tracking-tight whitespace-nowrap overflow-hidden">Net worth {formatCurrency(worth)} <span className="text-white/70 text-sm sm:text-base font-bold">of {compactMoney(next.threshold)}</span></p>
           </div>
         </div>
