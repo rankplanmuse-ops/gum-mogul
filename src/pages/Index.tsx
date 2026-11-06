@@ -14,7 +14,7 @@ import {
   zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock, refillLines, refillJars, buyMarketing, takeLoan, repayLoan,
   stockCapacity, totalMachines, hasUpgrade, SAVE_KEY, ActionResult,
 } from "@/lib/gameLogic";
-import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX } from "lucide-react";
+import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX, Home, Candy, Castle, Zap, Landmark } from "lucide-react";
 import { chiptune, MUSIC_PREF_KEY } from "@/lib/music";
 import { toast } from "sonner";
 
@@ -59,6 +59,26 @@ const Index = () => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [musicOn, setMusicOn] = useState(false);
+  const [activeTab, setActiveTab] = useState("play");
+
+  // iOS tab bar scroll-spy: highlight the section currently on screen.
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      (entries) => entries.forEach((e) => { if (e.isIntersecting) setActiveTab(e.target.id); }),
+      { rootMargin: "-40% 0px -55% 0px" },
+    );
+    ["play", "gums", "empire", "wallet", "bank"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) obs.observe(el);
+    });
+    return () => obs.disconnect();
+  }, []);
+
+  const goToSection = (id: string) => {
+    setActiveTab(id);
+    if (id === "play") window.scrollTo({ top: 0, behavior: "smooth" });
+    else document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // If the player left music on last visit, browsers still demand one
   // gesture before audio: the first click or tap anywhere starts it.
@@ -144,13 +164,14 @@ const Index = () => {
         onClick={toggleMusic}
         aria-label={musicOn ? "Turn the 8-bit music off" : "Turn the 8-bit music on"}
         title={musicOn ? "Music: on (8-bit chiptune, synthesized live)" : "Music: off"}
-        className={`fixed bottom-24 right-4 lg:bottom-5 lg:right-5 z-50 h-14 w-14 rounded-full border-[3px] border-white shadow-xl flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95 ${musicOn ? "bg-gradient-to-br from-fuchsia-500 to-amber-500 animate-floaty" : "bg-slate-500/85"}`}
+        className={`fixed bottom-[calc(8.4rem+env(safe-area-inset-bottom))] right-4 lg:bottom-5 lg:right-5 z-50 h-14 w-14 rounded-full border-[3px] border-white shadow-xl flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95 ${musicOn ? "bg-gradient-to-br from-fuchsia-500 to-amber-500 animate-floaty" : "bg-slate-500/85"}`}
       >
         {musicOn ? <Volume2 className="h-7 w-7" /> : <VolumeX className="h-7 w-7" />}
       </button>
 
-      {/* Mobile sticky action bar: the whole game loop without scrolling. */}
-      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-white/92 backdrop-blur border-t-2 px-3 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex gap-2">
+      {/* Mobile sticky action bar: the whole game loop without scrolling.
+          Floats directly above the iOS tab bar. */}
+      <div className="fixed bottom-[calc(3.55rem+env(safe-area-inset-bottom))] inset-x-0 z-40 lg:hidden bg-white/92 backdrop-blur border-t-2 px-3 pt-2 pb-2 flex gap-2">
         <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-1 h-12 rounded-full font-black gap-1.5">
           <Play className="h-5 w-5" /> Next Day
         </Button>
@@ -162,8 +183,31 @@ const Index = () => {
         </Button>
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-5 pb-28 lg:pb-8 sm:py-8 space-y-6 sm:space-y-8 max-w-7xl">
-        <header className="text-center space-y-2">
+      {/* iOS-style tab bar: frosted glass, safe-area aware, scroll-spy. */}
+      <nav className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-white/80 backdrop-blur-xl border-t border-black/10 pt-1 pb-[max(0.3rem,env(safe-area-inset-bottom))]" aria-label="Game sections">
+        <div className="grid grid-cols-5">
+          {[
+            { id: "play", label: "Play", icon: Home },
+            { id: "gums", label: "Gums", icon: Candy },
+            { id: "empire", label: "Empire", icon: Castle },
+            { id: "wallet", label: "Wallet", icon: Zap },
+            { id: "bank", label: "Bank", icon: Landmark },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => goToSection(tab.id)}
+              aria-current={activeTab === tab.id ? "page" : undefined}
+              className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-colors ${activeTab === tab.id ? "text-primary" : "text-slate-500"}`}
+            >
+              <tab.icon className="h-6 w-6" strokeWidth={activeTab === tab.id ? 2.6 : 2} />
+              <span className={`text-[10px] leading-none ${activeTab === tab.id ? "font-black" : "font-semibold"}`}>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <div className="relative z-10 container mx-auto px-4 py-5 pb-52 lg:pb-8 sm:py-8 space-y-6 sm:space-y-8 max-w-7xl">
+        <header id="play" className="text-center space-y-2 scroll-mt-4">
           <div className="text-5xl sm:text-6xl animate-floaty inline-block">🍬</div>
           <h1 className="text-5xl sm:text-6xl font-black tracking-tight bg-gradient-to-r from-pink-600 via-fuchsia-500 to-amber-500 bg-clip-text text-transparent drop-shadow-sm">
             Gum Mogul
@@ -222,13 +266,16 @@ const Index = () => {
             </div>
             <CostBreakdownPanel costs={breakdownCosts} title={gameState.lastDay ? `Yesterday (Day ${gameState.day - 1}) in numbers` : "Today, forecast"} lnShare={gameState.lastDay ? gameState.lastDay.lnShare : hasUpgrade(gameState, "ln-terminal") ? 0.45 : 0} />
           </div>
-          <ProductInventory
-            gameState={gameState}
-            onPurchase={(id, qty, method) => apply(purchaseStock(gameState, id, qty, method))}
-            onPriceChange={(id, price) => setGameState((s) => ({ ...s, products: s.products.map((p) => (p.id === id ? { ...p, sellPrice: price } : p)) }))}
-          />
+          <div id="gums" className="scroll-mt-3">
+            <ProductInventory
+              gameState={gameState}
+              onPurchase={(id, qty, method) => apply(purchaseStock(gameState, id, qty, method))}
+              onPriceChange={(id, price) => setGameState((s) => ({ ...s, products: s.products.map((p) => (p.id === id ? { ...p, sellPrice: price } : p)) }))}
+            />
+          </div>
         </div>
 
+        <div id="empire" className="scroll-mt-3">
         <EmpirePanel
           gameState={gameState}
           onBuyMachine={(id) => apply(buyMachine(gameState, id))}
@@ -238,22 +285,27 @@ const Index = () => {
           onRestockLevelChange={(levelId) => { setGameState((s) => ({ ...s, restockLevel: levelId })); toast.success(`Restock Bot set to ${levelId}`); }}
           onBuyMarketing={(channelId) => apply(buyMarketing(gameState, channelId))}
         />
+        </div>
 
-        <LightningWalletPanel
-          gameState={gameState}
-          onReceive={(amount, label) => { setGameState((s) => receiveSats(s, amount, label)); toast.success(`⚡ +${amount.toLocaleString()} sats settled`); }}
-          onZapPromo={() => apply(zapPromo(gameState))}
-          onSellSats={(amount) => apply(sellSats(gameState, amount))}
-          onRescueLoan={() => apply(takeRescueLoan(gameState))}
-        />
+        <div id="wallet" className="scroll-mt-3">
+          <LightningWalletPanel
+            gameState={gameState}
+            onReceive={(amount, label) => { setGameState((s) => receiveSats(s, amount, label)); toast.success(`⚡ +${amount.toLocaleString()} sats settled`); }}
+            onZapPromo={() => apply(zapPromo(gameState))}
+            onSellSats={(amount) => apply(sellSats(gameState, amount))}
+            onRescueLoan={() => apply(takeRescueLoan(gameState))}
+          />
+        </div>
 
         <InsightsPanel gameState={gameState} />
 
-        <BankPanel
-          gameState={gameState}
-          onTakeLoan={(tierId) => apply(takeLoan(gameState, tierId))}
-          onRepay={(amount) => apply(repayLoan(gameState, amount))}
-        />
+        <div id="bank" className="scroll-mt-3">
+          <BankPanel
+            gameState={gameState}
+            onTakeLoan={(tierId) => apply(takeLoan(gameState, tierId))}
+            onRepay={(amount) => apply(repayLoan(gameState, amount))}
+          />
+        </div>
 
         <footer className="text-center text-sm font-bold text-muted-foreground pb-4 space-y-3">
           <p>Gum Mogul is free and open source software (MIT). The sats in game are simulated; the Lightning Network it teaches is very real. ⚡</p>
