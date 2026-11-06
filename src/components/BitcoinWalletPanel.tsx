@@ -60,7 +60,7 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
         <div className="flex gap-2 mt-2 flex-wrap items-center">
           <Input type="number" min={10} value={amount} onChange={(e) => setAmount(e.target.value)} className="w-32 rounded-full font-black" aria-label="USD amount to convert" />
           {[100, 500, 1000, 5000].map((v) => (
-            <Button key={v} variant="secondary" onClick={() => setAmount(String(v))} className="rounded-full font-black h-9">${v.toLocaleString()}</Button>
+            <Button key={v} variant="secondary" onClick={() => setAmount(String(v))} className="rounded-full font-black min-h-9">${v.toLocaleString()}</Button>
           ))}
           <span className="text-xs font-bold text-muted-foreground">Cash available: {formatCurrency(gameState.cash)}</span>
         </div>
@@ -87,9 +87,9 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
         <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">Lightning is for spending; on-chain is for saving. Sweeping costs a 1% swap fee plus the chain fee, and lands as one clean UTXO. Minimum 10,000 sats: tiny UTXOs cost more to spend later than they are worth.</p>
         <div className="flex gap-2 mt-2 flex-wrap">
           {[10000, 50000, 250000].map((v) => (
-            <Button key={v} variant="secondary" onClick={() => onSweep(v)} disabled={gameState.sats < v} className="rounded-full font-black h-9">Sweep {v.toLocaleString()}</Button>
+            <Button key={v} variant="secondary" onClick={() => onSweep(v)} disabled={gameState.sats < v} className="rounded-full font-black min-h-9">Sweep {v.toLocaleString()}</Button>
           ))}
-          <Button variant="secondary" onClick={() => onSweep(Math.floor(gameState.sats))} disabled={gameState.sats < 10000} className="rounded-full font-black h-9">Sweep all {formatSats(gameState.sats)}</Button>
+          <Button variant="secondary" onClick={() => onSweep(Math.floor(gameState.sats))} disabled={gameState.sats < 10000} className="rounded-full font-black min-h-9">Sweep all {formatSats(gameState.sats)}</Button>
         </div>
       </div>
 
@@ -110,8 +110,9 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
             ))}
           </div>
         )}
-        <Button onClick={onConsolidate} disabled={utxos.length < 2 || onchain <= consolidateFee} className="w-full rounded-full font-black mt-2">
-          🧹 Consolidate {utxos.length} UTXOs into 1 (fee about {consolidateFee.toLocaleString()} sats at {gameState.btcFeeRate} sats/vB)
+        <p className="text-[11px] font-bold text-muted-foreground mt-2">Consolidation fee: about {consolidateFee.toLocaleString()} sats at today's {gameState.btcFeeRate} sats/vB.</p>
+        <Button onClick={onConsolidate} disabled={utxos.length < 2 || onchain <= consolidateFee} className="w-full rounded-full font-black mt-1">
+          🧹 Consolidate {utxos.length} UTXOs into 1
         </Button>
       </div>
 
@@ -127,10 +128,10 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
             </p>
             <p className="text-xs font-bold text-muted-foreground">Mined all time: {formatSats(gameState.miningTotalMined ?? 0)} · fees paid: {formatCurrency(gameState.miningTotalFees ?? 0)}</p>
             <div className="flex items-center gap-2 flex-wrap">
-              <Button onClick={onBuyMining} disabled={gameState.cash < miningMachineCost(gameState)} className="rounded-full font-black h-9">
+              <Button onClick={onBuyMining} disabled={gameState.cash < miningMachineCost(gameState)} className="rounded-full font-black min-h-9">
                 Add machine #{(gameState.miningMachines ?? 1) + 1} ({formatCurrency(miningMachineCost(gameState))})
               </Button>
-              <Button onClick={onToggleMining} variant={gameState.miningActive ? "destructive" : "default"} className="rounded-full font-black h-9">
+              <Button onClick={onToggleMining} variant={gameState.miningActive ? "destructive" : "default"} className="rounded-full font-black min-h-9">
                 {gameState.miningActive ? "Pause mining" : "Resume mining"}
               </Button>
             </div>

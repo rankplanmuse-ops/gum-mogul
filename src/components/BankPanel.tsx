@@ -38,10 +38,10 @@ export const BankPanel = ({ gameState, onTakeLoan, onRepay }: Props) => {
             <div key={loan.id} className="bg-sky-50 rounded-2xl border-2 border-sky-100 p-3">
               <p className="font-black text-sm">{loan.emoji} {loan.name} (day {loan.dayTaken}): you owe {formatCurrency(loan.owed)}</p>
               <div className="flex gap-2 mt-2">
-                <Button onClick={() => onRepay(50, loan.id)} disabled={gameState.cash <= 0} variant="secondary" className="flex-1 rounded-full font-black h-9">
+                <Button onClick={() => onRepay(50, loan.id)} disabled={gameState.cash <= 0} variant="secondary" className="flex-1 rounded-full font-black min-h-9">
                   Repay $50
                 </Button>
-                <Button onClick={() => onRepay(loan.owed, loan.id)} disabled={gameState.cash <= 0} className="flex-1 rounded-full font-black h-9">
+                <Button onClick={() => onRepay(loan.owed, loan.id)} disabled={gameState.cash <= 0} className="flex-1 rounded-full font-black min-h-9">
                   Pay off {formatCurrency(Math.min(loan.owed, Math.max(0, gameState.cash)))}
                 </Button>
               </div>

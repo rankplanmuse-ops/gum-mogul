@@ -50,7 +50,7 @@ export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUp
                     <p className="text-xs font-black text-amber-600 mt-3">🔒 Needs {gameState.locations.find((l) => l.id === loc.requiresLocation)?.name} open first</p>
                   )}
                   <Button onClick={() => onUnlockLocation(loc.id)} variant="secondary" className="w-full rounded-full font-black mt-3 gap-1">
-                    <Lock className="h-4 w-4" /> Open for {formatCurrency(loc.unlockCost)} + first machine {formatCurrency(MACHINE_COST)}
+                    <Lock className="h-4 w-4" /> Open for {formatCurrency(loc.unlockCost + MACHINE_COST)} total (incl. first machine)
                   </Button>
                 </>
               )}
@@ -79,7 +79,7 @@ export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUp
                       {daysLeft > 0 ? (
                         <p className="font-black text-accent text-sm mt-2">✅ Live, {daysLeft} day{daysLeft === 1 ? "" : "s"} left</p>
                       ) : (
-                        <Button onClick={() => onBuyMarketing(c.id)} disabled={gameState.cash < c.cost} className="w-full rounded-full font-black mt-2 h-9">
+                        <Button onClick={() => onBuyMarketing(c.id)} disabled={gameState.cash < c.cost} className="w-full rounded-full font-black mt-2">
                           Launch {formatCurrency(c.cost)}
                         </Button>
                       )}
@@ -102,7 +102,7 @@ export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUp
                       {locked ? (
                         <p className="text-[11px] font-black text-amber-600 mt-2">🔒 Unlocks at ${a.requiresRevenue.toLocaleString()} lifetime revenue</p>
                       ) : (
-                        <Button onClick={() => onToggleOngoing(a.id)} variant={running ? "destructive" : "default"} className="w-full rounded-full font-black mt-2 h-9">
+                        <Button onClick={() => onToggleOngoing(a.id)} variant={running ? "destructive" : "default"} className="w-full rounded-full font-black mt-2">
                           {running ? "Stop activity" : `Start · $${a.dailyCost}/day`}
                         </Button>
                       )}
