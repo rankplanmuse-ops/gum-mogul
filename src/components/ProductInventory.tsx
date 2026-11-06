@@ -5,6 +5,7 @@ import { GameState } from "@/types/game";
 import { formatCurrency, forecastDemand, hasUpgrade, SATS_PER_USD, LN_SUPPLIER_DISCOUNT, bulkDiscountFor, purchaseFactor } from "@/lib/gameLogic";
 import { Lock, ShoppingCart, Zap, DollarSign } from "lucide-react";
 import { useState } from "react";
+import { GUM_IMAGES } from "@/assets/gumImages";
 
 interface Props {
   gameState: GameState;
@@ -38,7 +39,7 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
             return (
               <Card key={p.id} className="bubbly-card p-6 border-dashed opacity-70 bg-muted/50">
                 <div className="flex items-center gap-3">
-                  <div className="gumball w-14 h-14 bg-gradient-to-br from-slate-300 to-slate-400 grayscale">{p.emoji}</div>
+                  <div className="gumball w-14 h-14 overflow-hidden grayscale"><img src={GUM_IMAGES[p.id]} alt={p.name} className="w-full h-full object-cover" draggable={false} /></div>
                   <div>
                     <h3 className="font-black flex items-center gap-2"><Lock className="h-4 w-4" /> {p.name}</h3>
                     <p className="text-sm font-semibold text-muted-foreground">Unlocks at {formatCurrency(p.unlockRevenue || 0)} total revenue</p>
@@ -59,7 +60,7 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
             <Card key={p.id} className="bubbly-card p-5 hover:-translate-y-1 transition-transform">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`gumball w-14 h-14 bg-gradient-to-br ${p.color} animate-wiggle-hover`}>{p.emoji}</div>
+                  <div className="gumball w-14 h-14 overflow-hidden animate-wiggle-hover"><img src={GUM_IMAGES[p.id]} alt={p.name} className="w-full h-full object-cover" draggable={false} /></div>
                   <div>
                     <h3 className="font-black leading-tight">{p.name}</h3>
                     <p className="text-xs font-bold text-muted-foreground">cost {formatCurrency(p.costPrice)} · unit margin <span className={margin / p.sellPrice >= 0.5 ? "text-accent" : margin / p.sellPrice >= 0.25 ? "text-amber-600" : "text-rose-600"}>{formatCurrency(margin)} ({Math.round((margin / p.sellPrice) * 100)}%)</span></p>
