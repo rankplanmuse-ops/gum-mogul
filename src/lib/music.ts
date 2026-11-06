@@ -69,7 +69,7 @@ const SECTIONS: Section[] = [
 
 const midiHz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
-const renderOvertureUrl = (): string => {
+const renderOvertureBlob = (): Blob => {
   const totalBars = SECTIONS.reduce((n, s) => n + s.chords.length, 0);
   const sps = Math.round(SAMPLE_RATE * STEP_SECONDS);
   const total = totalBars * STEPS_PER_BAR * sps;
@@ -192,7 +192,37 @@ const renderOvertureUrl = (): string => {
     const v = Math.max(-1, Math.min(1, buf[i] * gain));
     view.setInt16(44 + i * 2, Math.round(v * 32767), true);
   }
-  return URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+  return new Blob([bytes], { type: "audio/wav" });
+};
+
+// The render synthesizes about 4 million samples on the phone's CPU, which
+// takes seconds. Cache the finished WAV in IndexedDB so it is rendered
+// exactly once per device; later visits load the blob near-instantly.
+const CACHE_DB = "gum-mogul-cache";
+const CACHE_KEY = "overture-v1";
+const idbOpen = (): Promise<IDBDatabase | null> => new Promise((resolve) => {
+  try {
+    const req = indexedDB.open(CACHE_DB, 1);
+    req.onupgradeneeded = () => { try { req.result.createObjectStore("audio"); } catch { /* exists */ } };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(null);
+  } catch { resolve(null); }
+});
+const idbGetAudio = async (): Promise<Blob | null> => {
+  const db = await idbOpen();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const get = db.transaction("audio", "readonly").objectStore("audio").get(CACHE_KEY);
+      get.onsuccess = () => resolve((get.result as Blob) ?? null);
+      get.onerror = () => resolve(null);
+    } catch { resolve(null); }
+  });
+};
+const idbPutAudio = async (blob: Blob) => {
+  const db = await idbOpen();
+  if (!db) return;
+  try { db.transaction("audio", "readwrite").objectStore("audio").put(blob, CACHE_KEY); } catch { /* cache is best-effort */ }
 };
 
 class Soundtrack {
@@ -213,27 +243,42 @@ class Soundtrack {
     }
     if (this.rendering) return;
     this.rendering = true;
-    if (this.onComposing) this.onComposing();
-    // Render off the tap handler so the UI never freezes while composing.
-    setTimeout(() => {
-      try {
-        this.url = renderOvertureUrl();
-        this.audio = new Audio(this.url);
-        this.audio.loop = true;
-        this.audio.volume = 0.3;
-        this.audio.preload = "auto";
-        this.rendering = false;
-        if (this.wantPlay) {
-          this.playing = true;
-          this.audio.play().catch(() => { this.playing = false; if (this.onBlocked) this.onBlocked(); });
-        }
-      } catch {
-        this.rendering = false;
-        this.playing = false;
-        if (this.onBlocked) this.onBlocked();
-      }
-    }, 40);
-    this.playing = true; // optimistic: the button shows "on" while it renders
+    this.playing = true; // optimistic: the button shows "on" while it loads
+    const finish = (url: string) => {
+      this.url = url;
+      this.audio = new Audio(url);
+      this.audio.loop = true;
+      this.audio.volume = 0.3;
+      this.audio.preload = "auto";
+      this.rendering = false;
+      if (this.wantPlay) {
+        this.playing = true;
+        this.audio.play().catch(() => { this.playing = false; if (this.onBlocked) this.onBlocked(); });
+      } else this.playing = false;
+    };
+    const fail = () => {
+      this.rendering = false;
+      this.playing = false;
+      if (this.onBlocked) this.onBlocked();
+    };
+    // Fast path: a cached render from a previous visit loads at once.
+    void idbGetAudio().then((cached) => {
+      if (cached) { finish(URL.createObjectURL(cached)); return; }
+      if (this.onComposing) this.onComposing();
+      // Render off the tap handler so the UI never freezes while composing.
+      setTimeout(() => {
+        try {
+          const blob = renderOvertureBlob();
+          void idbPutAudio(blob);
+          finish(URL.createObjectURL(blob));
+        } catch { fail(); }
+      }, 40);
+    }).catch(() => {
+      if (this.onComposing) this.onComposing();
+      setTimeout(() => {
+        try { finish(URL.createObjectURL(renderOvertureBlob())); } catch { fail(); }
+      }, 40);
+    });
   }
 
   stop() {
