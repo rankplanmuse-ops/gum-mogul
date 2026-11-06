@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GameState } from "@/types/game";
 import {
-  formatCurrency, formatSats, BTC_ROUTES, SATS_PER_USD, consolidationFeeSats,
-  MINING_EQUIPMENT_COST, MINING_MONTHLY_FEE, MINING_REQUIRES_REVENUE,
+  formatCurrency, formatSats, formatBtc, BTC_ROUTES, SATS_PER_USD, consolidationFeeSats,
+  MINING_EQUIPMENT_COST, MINING_MONTHLY_FEE, MINING_REQUIRES_REVENUE, miningMachineCost,
+  MINING_EXPECTED_WEEKLY_SATS,
 } from "@/lib/gameLogic";
 import { Bitcoin, ShieldCheck, Layers, Pickaxe } from "lucide-react";
 
@@ -35,11 +36,23 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
         Turn fiat profits into bitcoin you actually hold. No exchange account, no custodian: every buy lands in your own wallet as a UTXO, and you manage those UTXOs like a grown-up bitcoiner.
       </p>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-3 text-center">
-        <div className="bg-white/80 rounded-2xl border-2 py-2 px-1"><p className="font-black text-sm sm:text-base">{formatSats(onchain)}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">on-chain balance</p></div>
-        <div className="bg-white/80 rounded-2xl border-2 py-2 px-1"><p className="font-black text-sm sm:text-base">{formatCurrency(onchain / SATS_PER_USD)}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">value at game rate</p></div>
-        <div className="bg-white/80 rounded-2xl border-2 py-2 px-1"><p className="font-black text-sm sm:text-base">{utxos.length}</p><p className="text-[10px] font-bold text-muted-foreground uppercase">UTXOs</p></div>
-        <div className="bg-white/80 rounded-2xl border-2 py-2 px-1"><p className="font-black text-sm sm:text-base">{gameState.btcFeeRate} sats/vB</p><p className="text-[10px] font-bold text-muted-foreground uppercase">mempool fee today</p></div>
+      <div className="mt-3 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-amber-950 text-white p-4 sm:p-5 shadow-[0_10px_0_rgba(120,53,15,0.35)]">
+        <div className="flex items-center justify-between gap-2">
+          <p className="flex items-center gap-2 text-[11px] font-black tracking-widest uppercase">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-white text-base font-black">₿</span>
+            Gum Mogul Vault
+          </p>
+          <span className="text-[10px] font-black bg-white/15 rounded-full px-2 py-0.5">SELF-CUSTODY · SIMULATED</span>
+        </div>
+        <p className="font-black text-3xl sm:text-4xl mt-3 tabular-nums">{formatBtc(onchain)}</p>
+        <p className="text-sm font-bold text-amber-200/90 mt-0.5">= {formatSats(onchain)} · worth {formatCurrency(onchain / SATS_PER_USD)} at the game rate</p>
+        <p className="text-[11px] font-black text-white/70 mt-1">1 BTC = 100,000,000 sats. Sats are just slices of a bitcoin: stack enough of them and the decimals above start to move.</p>
+        <p className="font-mono text-[11px] text-white/50 mt-2 truncate">bc1qgummogu1vau1t · in-game address, not a real wallet</p>
+        <div className="flex gap-2 mt-3 flex-wrap text-[11px] font-black">
+          <span className="bg-white/10 rounded-full px-2.5 py-1">🧾 {utxos.length} UTXO{utxos.length === 1 ? "" : "s"}</span>
+          <span className="bg-white/10 rounded-full px-2.5 py-1">⛽ {gameState.btcFeeRate} sats/vB today</span>
+          <span className="bg-white/10 rounded-full px-2.5 py-1">⚡ Lightning: {formatSats(gameState.sats)}</span>
+        </div>
       </div>
 
       <div className="mt-4">
@@ -105,18 +118,26 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
       <div className="mt-4 bg-white/80 rounded-2xl border-2 p-3">
         <p className="text-sm font-black flex items-center gap-1.5"><Pickaxe className="h-4 w-4 text-amber-600" /> Mining as a service</p>
         <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">
-          No KYC route that PRINTS bitcoin: a hosting company runs your machines. One-off equipment {formatCurrency(MINING_EQUIPMENT_COST)}, then {formatCurrency(MINING_MONTHLY_FEE)}/month in power and hosting, billed daily. Payouts land weekly in your wallet and swing hard with difficulty and uptime: some weeks beat the fees, some weeks the fees win. Needs {formatCurrency(MINING_REQUIRES_REVENUE)} lifetime revenue.
+          No KYC route that PRINTS bitcoin: a hosting company runs your machines. First machine {formatCurrency(MINING_EQUIPMENT_COST)}, then {formatCurrency(MINING_MONTHLY_FEE)}/month per machine in power and hosting, billed daily. Add as many machines as you like: every new one costs 15% more rack space, and fees and expected payouts scale with the fleet. Payouts land weekly in your wallet and swing hard with difficulty and uptime. Needs {formatCurrency(MINING_REQUIRES_REVENUE)} lifetime revenue to start.
         </p>
         {gameState.miningOwned ? (
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <p className="text-xs font-black">{gameState.miningActive ? "⛏️ Mining: ON" : "⏸️ Mining: paused"} · mined all time: {formatSats(gameState.miningTotalMined ?? 0)} · fees paid: {formatCurrency(gameState.miningTotalFees ?? 0)}</p>
-            <Button onClick={onToggleMining} variant={gameState.miningActive ? "destructive" : "default"} className="rounded-full font-black h-9">
-              {gameState.miningActive ? "Pause mining" : "Resume mining"}
-            </Button>
+          <div className="mt-2 space-y-2">
+            <p className="text-xs font-black">
+              {gameState.miningActive ? "⛏️ Mining: ON" : "⏸️ Mining: paused"} · fleet: {gameState.miningMachines ?? 1} machine{(gameState.miningMachines ?? 1) > 1 ? "s" : ""} · expected about {formatSats(MINING_EXPECTED_WEEKLY_SATS * (gameState.miningMachines ?? 1))}/week · fees {formatCurrency(MINING_MONTHLY_FEE * (gameState.miningMachines ?? 1))}/month
+            </p>
+            <p className="text-xs font-bold text-muted-foreground">Mined all time: {formatSats(gameState.miningTotalMined ?? 0)} · fees paid: {formatCurrency(gameState.miningTotalFees ?? 0)}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button onClick={onBuyMining} disabled={gameState.cash < miningMachineCost(gameState)} className="rounded-full font-black h-9">
+                Add machine #{(gameState.miningMachines ?? 1) + 1} ({formatCurrency(miningMachineCost(gameState))})
+              </Button>
+              <Button onClick={onToggleMining} variant={gameState.miningActive ? "destructive" : "default"} className="rounded-full font-black h-9">
+                {gameState.miningActive ? "Pause mining" : "Resume mining"}
+              </Button>
+            </div>
           </div>
         ) : (
           <Button onClick={onBuyMining} disabled={gameState.cash < MINING_EQUIPMENT_COST || gameState.totalRevenue < MINING_REQUIRES_REVENUE} className="rounded-full font-black mt-2">
-            Buy equipment {formatCurrency(MINING_EQUIPMENT_COST)}
+            Buy machine #1 {formatCurrency(MINING_EQUIPMENT_COST)}
           </Button>
         )}
       </div>

@@ -320,6 +320,7 @@ export const freshState = (): GameState => ({
   utxos: [],
   btcFeeRate: 12,
   miningOwned: false,
+  miningMachines: 0,
   miningActive: false,
   miningTotalFees: 0,
   miningTotalMined: 0,
@@ -647,16 +648,25 @@ export const consolidateUtxos = (state: GameState): ActionResult => {
   return { state: s, ok: true, message: `Consolidated ${utxos.length} UTXOs into 1 (fee ${fee.toLocaleString()} sats)` };
 };
 
+// Each additional rig costs 15% more than the last (rack space gets scarce).
+// There is no fleet cap: add as many as your cash allows.
+export const miningMachineCost = (state: GameState): number =>
+  Math.round(MINING_EQUIPMENT_COST * Math.pow(1.15, state.miningMachines ?? (state.miningOwned ? 1 : 0)));
+
 export const buyMiningRig = (state: GameState): ActionResult => {
-  if (state.miningOwned) return { state, ok: false, message: "You already run a mining setup" };
-  if (state.totalRevenue < MINING_REQUIRES_REVENUE) return { state, ok: false, message: `Mining unlocks at $${MINING_REQUIRES_REVENUE.toLocaleString()} lifetime revenue` };
-  if (state.cash < MINING_EQUIPMENT_COST) return { state, ok: false, message: `Equipment costs $${MINING_EQUIPMENT_COST.toLocaleString()}` };
+  const machines = state.miningMachines ?? (state.miningOwned ? 1 : 0);
+  if (machines === 0 && state.totalRevenue < MINING_REQUIRES_REVENUE) return { state, ok: false, message: `Mining unlocks at $${MINING_REQUIRES_REVENUE.toLocaleString()} lifetime revenue` };
+  const cost = miningMachineCost(state);
+  if (state.cash < cost) return { state, ok: false, message: `Machine #${machines + 1} costs $${cost.toLocaleString()}` };
   const s = { ...state, log: [...state.log] };
-  s.cash -= MINING_EQUIPMENT_COST;
+  s.cash -= cost;
+  s.miningMachines = machines + 1;
   s.miningOwned = true;
   s.miningActive = true;
-  pushLog(s, "⛏️", `Mining as a service is live: $${MINING_EQUIPMENT_COST.toLocaleString()} of equipment installed at a hosting facility, $${MINING_MONTHLY_FEE.toLocaleString()}/month in hosting and power. Payouts land weekly, straight to your wallet. Difficulty and uptime mean some weeks pay well and some do not cover the fees.`, "ln");
-  return { state: s, ok: true, message: "Mining live: weekly payouts to your wallet" };
+  pushLog(s, "⛏️", machines === 0
+    ? `Mining as a service is live: $${cost.toLocaleString()} of equipment installed at a hosting facility, $${MINING_MONTHLY_FEE.toLocaleString()}/month in hosting and power per machine. Payouts land weekly, straight to your wallet. Difficulty and uptime mean some weeks pay well and some do not cover the fees. Add more machines any time; each new one costs 15% more rack space.`
+    : `Machine #${machines + 1} installed for $${cost.toLocaleString()}. Your fleet now runs ${machines + 1} machines: $${(MINING_MONTHLY_FEE * (machines + 1)).toLocaleString()}/month in fees, roughly ${(MINING_EXPECTED_WEEKLY_SATS * (machines + 1)).toLocaleString()} sats expected per week before variance.`, "ln");
+  return { state: s, ok: true, message: machines === 0 ? "Mining live: weekly payouts to your wallet" : `Machine #${machines + 1} mining` };
 };
 
 export const toggleMining = (state: GameState): ActionResult => {
@@ -850,12 +860,13 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   // weekly as a fresh UTXO. Difficulty and downtime make the payout swing:
   // some weeks beat the fees, some do not come close.
   if (s.miningOwned && s.miningActive) {
-    const dailyFee = MINING_MONTHLY_FEE / 30;
+    const machines = s.miningMachines ?? 1;
+    const dailyFee = (MINING_MONTHLY_FEE * machines) / 30;
     s.cash -= dailyFee;
     s.miningTotalFees = (s.miningTotalFees ?? 0) + dailyFee;
     if (finishedDay % 7 === 0) {
       const mult = rand() < 0.1 ? 0 : 0.3 + rand() * 1.9;
-      const payout = Math.round(MINING_EXPECTED_WEEKLY_SATS * mult);
+      const payout = Math.round(MINING_EXPECTED_WEEKLY_SATS * machines * mult);
       const weekFees = dailyFee * 7;
       if (payout > 0) {
         s.utxos = [...s.utxos, { id: nextId(), day: finishedDay, sats: payout, source: "Mining payout", kyc: false }];
@@ -863,7 +874,7 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
         s.miningTotalMined = (s.miningTotalMined ?? 0) + payout;
       }
       pushLog(s, "⛏️", payout > 0
-        ? `Mining week: payout ${payout.toLocaleString()} sats (worth $${(payout / SATS_PER_USD).toFixed(0)}) against $${weekFees.toFixed(0)} of hosting fees. ${payout / SATS_PER_USD >= weekFees ? "Profitable week." : "Fees won this week."}`
+        ? `Mining week (${machines} machine${machines > 1 ? "s" : ""}): payout ${payout.toLocaleString()} sats (worth $${(payout / SATS_PER_USD).toFixed(0)}) against $${weekFees.toFixed(0)} of hosting fees. ${payout / SATS_PER_USD >= weekFees ? "Profitable week." : "Fees won this week."}`
         : `Mining week: the rigs were down (hosting outage). $0 payout against $${weekFees.toFixed(0)} of hosting fees. That is mining volatility.`, "ln");
     }
   }
@@ -976,3 +987,5 @@ export const formatCurrency = (amount: number): string =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
 
 export const formatSats = (sats: number): string => `${Math.round(sats).toLocaleString()} sats`;
+export const SATS_PER_BTC = 100_000_000;
+export const formatBtc = (sats: number): string => `${(sats / SATS_PER_BTC).toFixed(8)} BTC`;
