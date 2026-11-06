@@ -67,7 +67,7 @@ export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUp
         </div>
         ))}
 
-          <Card className="bubbly-card p-5 bg-gradient-to-br from-violet-100 to-fuchsia-100 mt-5">
+          <Card id="marketing" className="bubbly-card p-5 bg-gradient-to-br from-violet-100 to-fuchsia-100 mt-5 scroll-mt-3">
             <h3 className="font-black text-lg flex items-center gap-2"><Megaphone className="h-5 w-5 text-fuchsia-600" /> Marketing</h3>
             <p className="text-[13px] font-bold text-muted-foreground mt-1 leading-relaxed">Daily spend. Every $1/day adds about +1.8% demand. Diminishing vibes after $25, so the slider stops there.</p>
             <p className="text-3xl font-black mt-3">{formatCurrency(gameState.marketingSpend)}<span className="text-base text-muted-foreground">/day</span></p>
@@ -121,7 +121,7 @@ export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUp
           </Card>
       </div>
 
-      <div>
+      <div id="upgrades" className="scroll-mt-3">
         <h2 className="text-3xl font-black mb-1 flex items-center gap-2"><Sparkles className="h-7 w-7 text-amber-500" /> Upgrades</h2>
         <p className="text-[13px] font-bold text-muted-foreground mb-4">{gameState.upgrades.filter((u) => u.owned).length} of {gameState.upgrades.length} installed, grouped by the job they do. Affordable first, owned at the bottom of each group.</p>
         {UPGRADE_GROUPS.map((group) => {
@@ -161,7 +161,7 @@ export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUp
         })}
 
         {hasUpgrade(gameState, "auto-restock") && (
-          <Card className="bubbly-card p-5 mt-4 bg-gradient-to-br from-teal-50 to-emerald-50">
+          <Card id="robot" className="bubbly-card p-5 mt-4 bg-gradient-to-br from-teal-50 to-emerald-50 scroll-mt-3">
             <h3 className="font-black text-lg">🤖 Restock Bot fill level</h3>
             <p className="text-[13px] font-bold text-muted-foreground mt-1 leading-relaxed">How full the bot keeps your jars every morning. It buys in bulk where it can, so the 25/50/100 bulk discounts apply to bot orders too.</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mt-3">

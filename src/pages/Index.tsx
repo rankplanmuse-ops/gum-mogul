@@ -16,7 +16,7 @@ import {
   buyBtc, sweepLightningToChain, consolidateUtxos, buyMiningRig, toggleMining,
   stockCapacity, totalMachines, hasUpgrade, SAVE_KEY, ActionResult, LN_CUSTOMER_SHARE,
 } from "@/lib/gameLogic";
-import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX, Home, Candy, Castle, Zap, Landmark, Cog } from "lucide-react";
+import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX, Home, Candy, Castle, Zap, Landmark, Cog, Megaphone, Sparkles, Bot } from "lucide-react";
 import { chiptune, MUSIC_PREF_KEY } from "@/lib/music";
 import { sfxCoin, sfxError, sfxFanfare, setSfxEnabled, SFX_PREF_KEY } from "@/lib/sfx";
 import { toast } from "sonner";
@@ -91,7 +91,7 @@ const Index = () => {
       (entries) => entries.forEach((e) => { if (e.isIntersecting) setActiveTab(e.target.id); }),
       { rootMargin: "-40% 0px -55% 0px" },
     );
-    ["play", "gums", "empire", "wallet", "bank"].forEach((id) => {
+    ["play", "gums", "empire", "marketing", "upgrades", "robot", "wallet", "bank"].forEach((id) => {
       const el = document.getElementById(id);
       if (el) obs.observe(el);
     });
@@ -100,8 +100,11 @@ const Index = () => {
 
   const goToSection = (id: string) => {
     setActiveTab(id);
-    if (id === "play") window.scrollTo({ top: 0, behavior: "smooth" });
-    else document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (id === "play") { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    // The Restock Bot card only exists once the bot is bought; before that the
+    // Robot tab lands on Upgrades, where the bot is sold.
+    const el = document.getElementById(id) ?? (id === "robot" ? document.getElementById("upgrades") : null);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   // If the player left music on last visit, browsers still demand one
@@ -204,7 +207,7 @@ const Index = () => {
 
       {/* Mobile sticky action bar: the whole game loop without scrolling.
           Floats directly above the iOS tab bar. */}
-      <div className="fixed bottom-[calc(3.55rem+env(safe-area-inset-bottom))] inset-x-0 z-40 lg:hidden bg-white/92 backdrop-blur border-t-2 px-3 pt-2 pb-2 flex gap-2">
+      <div className="fixed bottom-[calc(3.3rem+env(safe-area-inset-bottom))] inset-x-0 z-40 lg:hidden bg-white/92 backdrop-blur border-t-2 px-3 pt-2 pb-2 flex gap-2">
         <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-[1.4] h-12 rounded-full font-black gap-1.5">
           <Play className="h-5 w-5" /> Next Day
         </Button>
@@ -218,11 +221,14 @@ const Index = () => {
 
       {/* iOS-style tab bar: frosted glass, safe-area aware, scroll-spy. */}
       <nav className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-white/80 backdrop-blur-xl border-t border-black/10 pt-1 pb-[max(0.3rem,env(safe-area-inset-bottom))]" aria-label="Game sections">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-8">
           {[
             { id: "play", label: "Play", icon: Home },
             { id: "gums", label: "Gums", icon: Candy },
             { id: "empire", label: "Empire", icon: Castle },
+            { id: "upgrades", label: "Upgrades", icon: Sparkles },
+            { id: "marketing", label: "Marketing", icon: Megaphone },
+            { id: "robot", label: "Robot", icon: Bot },
             { id: "wallet", label: "Wallet", icon: Zap },
             { id: "bank", label: "Bank", icon: Landmark },
           ].map((tab) => (
@@ -232,8 +238,8 @@ const Index = () => {
               aria-current={activeTab === tab.id ? "page" : undefined}
               className={`flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-colors ${activeTab === tab.id ? "text-primary" : "text-slate-500"}`}
             >
-              <tab.icon className="h-6 w-6" strokeWidth={activeTab === tab.id ? 2.6 : 2} />
-              <span className={`text-[10px] leading-none ${activeTab === tab.id ? "font-black" : "font-semibold"}`}>{tab.label}</span>
+              <tab.icon className="h-5 w-5" strokeWidth={activeTab === tab.id ? 2.6 : 2} />
+              <span className={`text-[9px] leading-none ${activeTab === tab.id ? "font-black" : "font-semibold"}`}>{tab.label}</span>
             </button>
           ))}
         </div>
