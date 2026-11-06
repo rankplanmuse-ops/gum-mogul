@@ -93,6 +93,12 @@
     @apply bg-background text-foreground;
     font-family: ui-rounded, "SF Pro Rounded", "Baloo 2", system-ui, sans-serif;
   }
+  /* Game display type: a heavy rounded face for every heading and title,
+     the single biggest "real game, not web app" signal. */
+  h1, h2, h3, .font-display {
+    font-family: "Baloo 2", ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
+    letter-spacing: 0.01em;
+  }
 }
 
 /* Bubbly motion */
@@ -141,7 +147,51 @@
   animation: bubble-rise linear infinite;
 }
 .bubbly-card {
-  @apply rounded-[1.75rem] border-[3px] shadow-[0_10px_0_rgba(0,0,0,0.06),0_20px_35px_-18px_rgba(219,39,119,0.35)];
+  @apply rounded-[1.75rem] border-[3px];
+  /* Chunky game frame: bright top edge (light hitting the frame), a hard
+     offset ledge underneath, and a soft coloured drop. Flat web cards have
+     none of these three layers. */
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -4px 0 rgba(160, 20, 90, 0.07),
+    0 6px 0 rgba(190, 24, 93, 0.13),
+    0 24px 38px -18px rgba(219, 39, 119, 0.38);
+}
+/* The stage behind the UI: candy-dot pattern on a pink-to-sky wash with
+   darkened edges (vignette), so bright panels sit ON something. */
+.game-scene {
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -5%, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(rgba(219, 39, 119, 0.08) 2px, transparent 2.6px),
+    radial-gradient(rgba(14, 165, 233, 0.10) 2px, transparent 2.6px),
+    radial-gradient(ellipse 120% 90% at 50% 45%, rgba(0, 0, 0, 0) 62%, rgba(88, 10, 50, 0.16) 100%),
+    linear-gradient(180deg, #fbcfe8 0%, #fdf2f8 34%, #e0f2fe 100%);
+  background-size: auto, 26px 26px, 26px 26px, auto, auto;
+  background-position: 0 0, 0 0, 13px 13px, 0 0, 0 0;
+}
+/* Buttons physically press: they sink 2px when tapped, like game buttons
+   with a bottom edge. (Tailwind hover/active transforms still win where
+   components set their own.) */
+button:not(:disabled) { transition: transform 0.07s ease, box-shadow 0.07s ease, filter 0.07s ease; }
+button:not(:disabled):active { transform: translateY(2px) scale(0.985); filter: brightness(0.97); }
+/* Framed modal shell, modelled on classic game settings panels: white
+   rim, coloured outline, deep hard shadow. */
+.game-frame {
+  border: 4px solid #ffffff;
+  outline: 3px solid rgba(219, 39, 119, 0.35);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.9),
+    0 10px 0 rgba(0, 0, 0, 0.10),
+    0 34px 60px -18px rgba(60, 5, 35, 0.55);
+  border-radius: 1.75rem;
+}
+/* Trapezoid title tab that overlaps the frame's top edge. */
+.ribbon-title {
+  clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, #f472b6, #db2777);
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.22);
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.15));
 }
 .gumball {
   @apply rounded-full shadow-inner flex items-center justify-center text-2xl shrink-0;

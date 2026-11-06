@@ -256,6 +256,7 @@ export const INITIAL_UPGRADES: Upgrade[] = [
   { id: "neon", name: "Neon Sign", emoji: "💡", blurb: "+15% demand everywhere, forever. Very bubbly.", cost: 200, owned: false },
   { id: "displays", name: "Digital Displays", emoji: "📺", blurb: "Animated screens on every machine loop your flavours in glorious 8-bit, with a live price ticker. +12% demand everywhere.", cost: 500, owned: false },
   { id: "auto-restock", name: "Restock Bot", emoji: "🤖", blurb: "Every morning the bot restocks for you. Four fill levels: Lean, Standard, Loaded, Max Out. Set it and let Auto Play run.", cost: 350, owned: false },
+  { id: "buyer-bot", name: "Procurement Negotiator", emoji: "🦾", blurb: "A ruthless little robot on the phone to your suppliers all day, haggling so you do not have to: 10% off EVERY stock purchase, forever. Stacks with bulk discounts and the 8% Lightning supplier discount.", cost: 500, owned: false },
 ];
 
 export const EVENTS: GameEvent[] = [
@@ -351,6 +352,9 @@ export const INITIAL_GAME_STATE: GameState = freshState();
 // ---- Derived helpers ---------------------------------------------------------
 export const hasUpgrade = (s: GameState, id: string) =>
   s.upgrades.find((u) => u.id === id)?.owned ?? false;
+
+// The Procurement Negotiator upgrade shaves 10% off every stock purchase.
+export const purchaseFactor = (s: GameState): number => (hasUpgrade(s, "buyer-bot") ? 0.9 : 1);
 
 export const totalMachines = (s: GameState) =>
   s.locations.reduce((n, l) => n + l.machines, 0);
@@ -450,7 +454,7 @@ export const purchaseStock = (
     return { state, ok: false, message: `Jar is full. Capacity is ${stockCapacity(state)} units (jar upgrades help)` };
 
   const bulk = bulkDiscountFor(quantity);
-  const costUsd = product.costPrice * quantity * (1 - bulk);
+  const costUsd = product.costPrice * quantity * (1 - bulk) * purchaseFactor(state);
   const s = { ...state, products: state.products.map((p) => ({ ...p })), lnTx: [...state.lnTx], log: [...state.log] };
 
   if (payMethod === "sats") {
@@ -701,6 +705,7 @@ export const refillLines = (state: GameState): RefillLine[] => {
   const level = RESTOCK_LEVELS.find((l) => l.id === state.restockLevel) ?? RESTOCK_LEVELS[1];
   const passes = level.id === "maxout" ? [level.factor, 6] : [level.factor];
   const stock = new Map(state.products.map((p) => [p.id, p.stock]));
+  const pf = purchaseFactor(state);
   let room = stockCapacity(state) - totalStock(state);
   let cash = state.cash;
   const lines = new Map<string, RefillLine>();
@@ -709,7 +714,7 @@ export const refillLines = (state: GameState): RefillLine[] => {
       if (!p.unlocked) continue;
       const want = Math.ceil(forecastDemand(state, p) * factor);
       let qty = Math.min(Math.max(0, want - (stock.get(p.id) ?? 0)), room);
-      while (qty > 0 && p.costPrice * qty * (1 - bulkDiscountFor(qty)) > cash) qty -= 1;
+      while (qty > 0 && p.costPrice * qty * (1 - bulkDiscountFor(qty)) * pf > cash) qty -= 1;
       // Bulk-tier optimisation: when an order lands just under a discount
       // tier (25 / 50 / 100), round UP to the tier if jar room and cash
       // allow. The extra gums are the cheapest you will ever buy them,
@@ -718,13 +723,13 @@ export const refillLines = (state: GameState): RefillLine[] => {
         for (const tierQty of [25, 50, 100]) {
           if (qty < tierQty && tierQty - qty <= Math.max(5, qty * 0.35)
             && tierQty <= qty + room
-            && p.costPrice * tierQty * (1 - bulkDiscountFor(tierQty)) <= cash) {
+            && p.costPrice * tierQty * (1 - bulkDiscountFor(tierQty)) * pf <= cash) {
             qty = tierQty;
           }
         }
       }
       if (qty > 0) {
-        const cost = p.costPrice * qty * (1 - bulkDiscountFor(qty));
+        const cost = p.costPrice * qty * (1 - bulkDiscountFor(qty)) * pf;
         const prev = lines.get(p.id);
         lines.set(p.id, { productId: p.id, qty: (prev?.qty ?? 0) + qty, cost: (prev?.cost ?? 0) + cost });
         stock.set(p.id, (stock.get(p.id) ?? 0) + qty);
