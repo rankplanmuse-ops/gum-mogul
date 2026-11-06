@@ -118,17 +118,6 @@ export const LightningWalletPanel = ({ gameState, onReceive, onZapPromo, onSellS
           )}
         </div>
 
-        <div className="rounded-2xl bg-sky-50 border-2 border-sky-200 p-4">
-          <h3 className="font-black text-sky-900">🌍 Try real Lightning (optional, leaves the game)</h3>
-          <p className="text-sm font-semibold text-sky-900/70 mt-1">
-            WebLN in this browser: <strong>{webln ? "detected ⚡" : "not detected"}</strong>. Or zap the makers a few real sats at their Lightning Address:
-          </p>
-          <a href={`lightning:${MAKER_LN_ADDRESS}`} className="inline-flex items-center gap-1 mt-2 font-black text-sky-700 underline">
-            ⚡ {MAKER_LN_ADDRESS} <ExternalLink className="h-3 w-3" />
-          </a>
-          <p className="text-xs font-semibold text-sky-900/60 mt-1">Opens your own Lightning wallet. The game never holds real keys or real money.</p>
-        </div>
-
         <div>
           <h3 className="font-black mb-2">Recent Lightning activity</h3>
           <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
@@ -140,6 +129,17 @@ export const LightningWalletPanel = ({ gameState, onReceive, onZapPromo, onSellS
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="rounded-2xl bg-sky-50 border-2 border-sky-200 p-4">
+          <h3 className="font-black text-sky-900">🌍 Try real Lightning (optional, leaves the game)</h3>
+          <p className="text-sm font-semibold text-sky-900/70 mt-1">
+            WebLN in this browser: <strong>{webln ? "detected ⚡" : "not detected"}</strong>. Or zap the makers a few real sats at their Lightning Address:
+          </p>
+          <a href={`lightning:${MAKER_LN_ADDRESS}`} className="inline-flex items-center gap-1 mt-2 font-black text-sky-700 underline">
+            ⚡ {MAKER_LN_ADDRESS} <ExternalLink className="h-3 w-3" />
+          </a>
+          <p className="text-xs font-semibold text-sky-900/60 mt-1">Opens your own Lightning wallet. The game never holds real keys or real money.</p>
         </div>
 
         <p className="text-xs font-bold text-amber-700 bg-amber-50 rounded-xl p-3">⚡ Lightning fact of the day: {fact}</p>

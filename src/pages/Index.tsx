@@ -239,7 +239,7 @@ const Index = () => {
         </div>
       </nav>
 
-      <div className="relative z-10 container mx-auto px-4 py-5 pb-52 lg:pb-8 sm:py-8 space-y-6 sm:space-y-8 max-w-7xl">
+      <div className="relative z-10 container mx-auto px-4 py-5 pb-52 lg:pb-8 sm:py-8 space-y-7 sm:space-y-10 max-w-7xl">
         <header id="play" className="text-center space-y-2 scroll-mt-4">
           <div className="text-5xl sm:text-6xl animate-floaty inline-block">🍬</div>
           <h1 className="text-5xl sm:text-6xl font-black tracking-tight bg-gradient-to-r from-pink-600 via-fuchsia-500 to-amber-500 bg-clip-text text-transparent drop-shadow-sm">
