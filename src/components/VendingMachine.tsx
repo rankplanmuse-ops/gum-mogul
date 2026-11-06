@@ -33,7 +33,9 @@ export const VendingMachine = ({ gumCount, capacity, machines, tickerText }: Pro
           <span>Jar fill</span><span>{Math.round(pct)}%</span>
         </div>
         <Progress value={pct} className="h-3" />
-        {pct < 25 && <p className="text-sm font-bold text-loss mt-2">⚠️ Jars are running low. Empty slots lose sales and reputation!</p>}
+        <div className="mt-2 min-h-[2.5rem] sm:min-h-[1.25rem]">
+          {pct < 25 && <p className="text-sm font-bold text-loss">⚠️ Jars are running low. Empty slots lose sales and reputation!</p>}
+        </div>
       </div>
     </Card>
   );
