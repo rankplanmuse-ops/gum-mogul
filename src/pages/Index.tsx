@@ -205,10 +205,10 @@ const Index = () => {
       {/* Mobile sticky action bar: the whole game loop without scrolling.
           Floats directly above the iOS tab bar. */}
       <div className="fixed bottom-[calc(3.55rem+env(safe-area-inset-bottom))] inset-x-0 z-40 lg:hidden bg-white/92 backdrop-blur border-t-2 px-3 pt-2 pb-2 flex gap-2">
-        <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-[1.4] h-12 rounded-full font-black gap-1.5 shadow-[0_6px_16px_rgba(219,39,119,0.4)]">
+        <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-[1.4] h-12 rounded-full font-black gap-1.5">
           <Play className="h-5 w-5" /> Next Day
         </Button>
-        <Button onClick={() => apply(refillJars(gameState))} disabled={refillUnits === 0 || gameState.gameOver} variant="secondary" className="flex-1 h-12 rounded-full font-black gap-1.5 border-2 border-teal-300 bg-teal-50 text-teal-900">
+        <Button onClick={() => apply(refillJars(gameState))} disabled={refillUnits === 0 || gameState.gameOver} variant="secondary" className="flex-1 h-12 rounded-full font-black gap-1.5">
           🧃 Refill{refillUnits > 0 ? ` $${refillCost.toFixed(0)}` : ""}
         </Button>
         <Button onClick={() => setIsAutoPlaying(!isAutoPlaying)} variant={isAutoPlaying ? "destructive" : "outline"} className="h-12 w-12 rounded-full font-black p-0" aria-label={isAutoPlaying ? "Stop auto play" : "Auto play"}>
@@ -289,14 +289,14 @@ const Index = () => {
             <VendingMachine gumCount={totalStock(gameState)} capacity={stockCapacity(gameState)} machines={totalMachines(gameState)} tickerText={hasUpgrade(gameState, "displays") ? gameState.products.filter((p) => p.unlocked).map((p) => `${p.emoji} ${p.name.toUpperCase()} $${p.sellPrice.toFixed(2)}`).join(" · ") + " · PAY WITH LIGHTNING ⚡ NO CARD FEES" : undefined} />
             <div className="order-first lg:order-none space-y-3">
               <div className="flex gap-3">
-                <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-[1.7] h-14 text-lg rounded-full font-black gap-2 shadow-[0_10px_24px_rgba(219,39,119,0.45)] ring-4 ring-pink-300/50">
+                <Button onClick={handleNextDay} disabled={isAutoPlaying || gameState.gameOver} className="flex-[1.7] h-14 text-lg rounded-full font-black gap-2 ring-4 ring-pink-300/50">
                   <Play className="h-5 w-5" /> Next Day
                 </Button>
                 <Button onClick={() => setIsAutoPlaying(!isAutoPlaying)} variant={isAutoPlaying ? "destructive" : "outline"} className="flex-1 h-14 text-base rounded-full font-black gap-2 bg-white/60 text-slate-600">
                   <FastForward className="h-5 w-5" /> {isAutoPlaying ? "Stop Auto" : "Auto Play"}
                 </Button>
               </div>
-              <Button onClick={() => apply(refillJars(gameState))} disabled={refillUnits === 0 || gameState.gameOver} variant="secondary" className="w-full h-12 rounded-full font-black gap-2 border-2 border-teal-300 bg-teal-50 text-teal-900">
+              <Button onClick={() => apply(refillJars(gameState))} disabled={refillUnits === 0 || gameState.gameOver} variant="secondary" className="w-full h-12 rounded-full font-black gap-2">
                 🧃 Refill jars{refillUnits > 0 ? `: ${refillUnits} gums for $${refillCost.toFixed(2)}` : " (already at forecast)"}
               </Button>
             </div>
@@ -392,7 +392,7 @@ const Index = () => {
             <p className="font-semibold text-muted-foreground mt-2">Three days in the red. You reached day {gameState.day} with {`$${gameState.totalRevenue.toFixed(0)}`} lifetime revenue and {gameState.achievements.length} achievements.</p>
             <div className="space-y-2 mt-6">
               {!gameState.rescueUsed && hasUpgrade(gameState, "ln-terminal") && (
-                <Button onClick={() => apply(takeRescueLoan(gameState))} className="w-full rounded-full font-black bg-amber-500 hover:bg-amber-600 h-12">
+                <Button onClick={() => apply(takeRescueLoan(gameState))} className="w-full rounded-full font-black h-12">
                   ⚡ Take the $200 Lightning rescue loan and keep going
                 </Button>
               )}

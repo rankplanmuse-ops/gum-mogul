@@ -72,7 +72,7 @@ export const LightningWalletPanel = ({ gameState, onReceive, onZapPromo, onSellS
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          <Button onClick={onZapPromo} disabled={!terminal || gameState.sats < ZAP_PROMO_COST_SATS} className="rounded-full font-black bg-fuchsia-500 hover:bg-fuchsia-600 gap-1">
+          <Button onClick={onZapPromo} disabled={!terminal || gameState.sats < ZAP_PROMO_COST_SATS} className="rounded-full font-black gap-1">
             <Megaphone className="h-4 w-4" /> Zap Promo +2 days ({ZAP_PROMO_COST_SATS.toLocaleString()})
           </Button>
           <Button variant="outline" onClick={() => onSellSats(10000)} disabled={gameState.sats < 10000} className="rounded-full font-black gap-1">
@@ -82,7 +82,7 @@ export const LightningWalletPanel = ({ gameState, onReceive, onZapPromo, onSellS
         {gameState.zapBoostDays > 0 && <p className="text-sm font-black text-fuchsia-600 animate-pop">📣 Zap promo active: +30% demand for {gameState.zapBoostDays} more day{gameState.zapBoostDays === 1 ? "" : "s"}!</p>}
 
         {(gameState.cash < 20 && !gameState.rescueUsed) && (
-          <Button onClick={onRescueLoan} disabled={!terminal} className="w-full rounded-full font-black bg-rose-500 hover:bg-rose-600 gap-1">
+          <Button onClick={onRescueLoan} disabled={!terminal} className="w-full rounded-full font-black gap-1">
             <ShieldAlert className="h-4 w-4" /> Cash is tight: take a $200 Lightning rescue loan
           </Button>
         )}
@@ -108,7 +108,7 @@ export const LightningWalletPanel = ({ gameState, onReceive, onZapPromo, onSellS
                   <Button size="sm" variant="outline" className="rounded-full font-bold gap-1" onClick={() => { navigator.clipboard?.writeText(invoice.bolt11); toast.success("Invoice copied"); }}>
                     <Copy className="h-3 w-3" /> Copy
                   </Button>
-                  <Button size="sm" disabled={paying || paid} onClick={simulatePay} className="rounded-full font-black bg-amber-500 hover:bg-amber-600">
+                  <Button size="sm" disabled={paying || paid} onClick={simulatePay} className="rounded-full font-black">
                     {paid ? "✅ Settled!" : paying ? "⚡ Settling…" : "Simulate a customer paying it"}
                   </Button>
                 </div>
