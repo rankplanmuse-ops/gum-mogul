@@ -16,7 +16,7 @@ export const CostBreakdownPanel = ({ costs, title, lnShare }: Props) => {
     { label: "Rent", amount: -costs.rent, positive: false },
     { label: "Marketing", amount: -costs.marketing, positive: false },
     { label: "Card fees (2.9% on card sales)", amount: -costs.cardFees, positive: false },
-    ...(costs.miningFees > 0 ? [{ label: "Mining hosting & power", amount: -costs.miningFees, positive: false }] : []),
+    { label: "Mining hosting & power", amount: costs.miningFees > 0 ? -costs.miningFees : 0, positive: false },
     { label: "Depreciation (machine wear)", amount: -costs.depreciation, positive: false },
     { label: "Tax (15% of profit)", amount: -costs.tax, positive: false },
   ];
@@ -25,7 +25,7 @@ export const CostBreakdownPanel = ({ costs, title, lnShare }: Props) => {
       <h2 className="text-2xl font-black flex items-center gap-2 mb-1">
         <Receipt className="h-6 w-6 text-primary" /> {title}
       </h2>
-      <p className="text-xs font-bold text-muted-foreground mb-4">
+      <p className="text-xs font-bold text-muted-foreground mb-4 min-h-[2.5rem] line-clamp-2">
         {lnShare > 0
           ? `⚡ ${Math.round(lnShare * 100)}% of sales arrive over Lightning: no card fee, settled instantly into your sats wallet.`
           : "All sales are card sales here, so the 2.9% fee bites every day. A Lightning Terminal fixes that."}
