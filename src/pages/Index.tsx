@@ -16,8 +16,9 @@ import {
   buyBtc, sweepLightningToChain, consolidateUtxos, buyMiningRig, toggleMining,
   stockCapacity, totalMachines, hasUpgrade, SAVE_KEY, ActionResult,
 } from "@/lib/gameLogic";
-import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX, Home, Candy, Castle, Zap, Landmark } from "lucide-react";
+import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX, Home, Candy, Castle, Zap, Landmark, Cog } from "lucide-react";
 import { chiptune, MUSIC_PREF_KEY } from "@/lib/music";
+import { sfxCoin, sfxError, sfxFanfare, setSfxEnabled, SFX_PREF_KEY } from "@/lib/sfx";
 import { toast } from "sonner";
 
 const loadSave = (): GameState => {
@@ -65,7 +66,20 @@ const Index = () => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [musicOn, setMusicOn] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [sfxOn, setSfxOn] = useState<boolean>(() => {
+    try { return localStorage.getItem(SFX_PREF_KEY) !== "off"; } catch { return true; }
+  });
   const [activeTab, setActiveTab] = useState("play");
+
+  useEffect(() => { setSfxEnabled(sfxOn); }, [sfxOn]);
+  const toggleSfx = () => {
+    const nowOn = !sfxOn;
+    setSfxOn(nowOn);
+    setSfxEnabled(nowOn);
+    try { localStorage.setItem(SFX_PREF_KEY, nowOn ? "on" : "off"); } catch { /* ignore */ }
+    if (nowOn) sfxCoin();
+  };
 
   // iOS tab bar scroll-spy: highlight the section currently on screen.
   useEffect(() => {
@@ -130,8 +144,8 @@ const Index = () => {
   const refillUnits = refill.reduce((n, l) => n + l.qty, 0);
   const refillCost = refill.reduce((n, l) => n + l.cost, 0);
   const apply = (result: ActionResult) => {
-    if (result.ok) { setGameState(result.state); toast.success(result.message); }
-    else toast.error(result.message);
+    if (result.ok) { setGameState(result.state); toast.success(result.message); sfxCoin(); }
+    else { toast.error(result.message); sfxError(); }
   };
 
   const handleNextDay = () => {
@@ -140,10 +154,14 @@ const Index = () => {
     setGameState(after);
     const p = after.lastDay;
     if (p) {
-      if (p.netProfit >= 0) toast.success(`Day ${before.day} done: +$${p.netProfit.toFixed(2)} profit${p.satsEarned > 0 ? `, +${p.satsEarned.toLocaleString()} sats ⚡` : ""}`);
-      else toast.error(`Day ${before.day} done: $${Math.abs(p.netProfit).toFixed(2)} loss`);
+      if (p.netProfit >= 0) { toast.success(`Day ${before.day} done: +$${p.netProfit.toFixed(2)} profit${p.satsEarned > 0 ? `, +${p.satsEarned.toLocaleString()} sats ⚡` : ""}`); sfxCoin(); }
+      else { toast.error(`Day ${before.day} done: $${Math.abs(p.netProfit).toFixed(2)} loss`); sfxError(); }
     }
-    after.achievements.filter((a) => !before.achievements.includes(a)).forEach(() => toast.success("🏆 Achievement unlocked! Check the trophy shelf.", { duration: 4000 }));
+    const newAchievements = after.achievements.filter((a) => !before.achievements.includes(a));
+    if (newAchievements.length) sfxFanfare();
+    newAchievements.forEach(() => toast.success("🏆 Achievement unlocked! Check the trophy shelf.", { duration: 4000 }));
+    const newMilestones = (after.milestonesClaimed ?? 0) - (before.milestonesClaimed ?? 0);
+    if (newMilestones > 0) { sfxFanfare(); toast.success("🎉 Milestone reached! Reward paid, check the diary.", { duration: 5000 }); }
   };
 
   const handleReset = () => {
@@ -159,7 +177,7 @@ const Index = () => {
     : costs;
 
   return (
-    <div className="min-h-screen relative overflow-x-clip bg-gradient-to-b from-pink-100 via-rose-50 to-sky-100">
+    <div className="min-h-screen relative overflow-x-clip game-scene">
       <div className="fixed inset-0 pointer-events-none z-0" aria-hidden>
         {BUBBLES.map((b, i) => (
           <span key={i} className="bubble" style={{ left: b.left, width: b.size, height: b.size, animationDelay: b.delay, animationDuration: b.duration }} />
@@ -221,6 +239,9 @@ const Index = () => {
           <p className="text-base sm:text-lg font-bold text-muted-foreground">Build a bubblegum empire, one machine, one zap at a time. Climb the milestone ladder: $2.5k, $25k, $250k, $2.5M, each rung pays a reward 👑</p>
           <button onClick={() => setShowHelp(!showHelp)} className="inline-flex items-center gap-1 font-black text-primary underline underline-offset-4">
             {showHelp ? <X className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />} How to play
+          </button>
+          <button onClick={() => setShowSettings(true)} aria-label="Open settings" className="ml-3 inline-flex items-center justify-center h-10 w-10 rounded-2xl bg-white border-[3px] border-pink-200 shadow-[0_4px_0_rgba(190,24,93,0.18)] text-pink-600 align-middle">
+            <Cog className="h-5 w-5" />
           </button>
           {showHelp && (
             <div className="max-w-2xl mx-auto text-left bg-white/85 backdrop-blur rounded-3xl border-[3px] p-5 text-sm font-semibold space-y-2 animate-pop">
@@ -329,6 +350,30 @@ const Index = () => {
           </Button>
         </footer>
       </div>
+
+      {showSettings && (
+        <div className="fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-[2px] flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
+          <div className="game-frame relative bg-gradient-to-b from-sky-100 via-white to-pink-50 max-w-sm w-full px-6 pb-6 pt-10 animate-pop" onClick={(e) => e.stopPropagation()}>
+            <div className="ribbon-title absolute -top-5 left-1/2 -translate-x-1/2 px-10 py-2 text-2xl font-black font-display whitespace-nowrap">Settings</div>
+            <button onClick={() => setShowSettings(false)} aria-label="Close settings" className="absolute -top-3 right-3 h-10 w-10 rounded-xl bg-white border-[3px] border-rose-300 shadow-[0_4px_0_rgba(190,24,93,0.2)] text-rose-500 font-black text-lg leading-none">✕</button>
+            <div className="space-y-2.5 mt-1">
+              <button onClick={toggleMusic} className="w-full flex items-center justify-between bg-white/85 rounded-2xl border-2 px-4 py-3 font-black">
+                <span>🎵 Music: Gum Mogul Overture</span><span className={musicOn ? "text-accent" : "text-muted-foreground"}>{musicOn ? "ON" : "OFF"}</span>
+              </button>
+              <button onClick={toggleSfx} className="w-full flex items-center justify-between bg-white/85 rounded-2xl border-2 px-4 py-3 font-black">
+                <span>🔊 Sound effects</span><span className={sfxOn ? "text-accent" : "text-muted-foreground"}>{sfxOn ? "ON" : "OFF"}</span>
+              </button>
+              <button onClick={() => { setShowSettings(false); setShowHelp(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="w-full flex items-center justify-between bg-white/85 rounded-2xl border-2 px-4 py-3 font-black">
+                <span>❓ How to play</span><span className="text-primary">Open</span>
+              </button>
+              <button onClick={() => { setShowSettings(false); handleReset(); }} className="w-full flex items-center justify-between bg-white/85 rounded-2xl border-2 border-rose-200 px-4 py-3 font-black text-rose-600">
+                <span>🗑️ Reset game</span><span>Wipe save</span>
+              </button>
+            </div>
+            <p className="text-[11px] font-bold text-muted-foreground text-center mt-4">Gum Mogul · free and open source (MIT) · the sats are simulated, the lessons are real ⚡</p>
+          </div>
+        </div>
+      )}
 
       {gameState.gameOver && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">

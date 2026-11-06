@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { GameState } from "@/types/game";
-import { formatCurrency, forecastDemand, hasUpgrade, SATS_PER_USD, LN_SUPPLIER_DISCOUNT, bulkDiscountFor } from "@/lib/gameLogic";
+import { formatCurrency, forecastDemand, hasUpgrade, SATS_PER_USD, LN_SUPPLIER_DISCOUNT, bulkDiscountFor, purchaseFactor } from "@/lib/gameLogic";
 import { Lock, ShoppingCart, Zap, DollarSign } from "lucide-react";
 import { useState } from "react";
 
@@ -51,7 +51,7 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
           const margin = p.sellPrice - p.costPrice;
           const q = qty[p.id] ?? 10;
           const bulk = bulkDiscountFor(q);
-          const costUsd = p.costPrice * q * (1 - bulk);
+          const costUsd = p.costPrice * q * (1 - bulk) * purchaseFactor(gameState);
           const costSats = Math.ceil(costUsd * SATS_PER_USD * (1 - LN_SUPPLIER_DISCOUNT));
           const low = p.stock < forecast;
           const step = p.refPrice < 1 ? 0.05 : 0.25;
@@ -111,6 +111,7 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
                 {bulk > 0
                   ? <span className="text-accent">🏷️ Bulk discount applied: {Math.round(bulk * 100)}% off this order{method === "sats" ? ", plus the 8% Lightning discount" : ""}</span>
                   : <span className="text-muted-foreground">Order 25+ for 5% off, 50+ for 10%, 100+ for 15%</span>}
+                {hasUpgrade(gameState, "buyer-bot") && <span className="text-accent block mt-0.5">🦾 Procurement Negotiator: extra 10% off this order, already in the price above</span>}
               </p>
             </Card>
           );
