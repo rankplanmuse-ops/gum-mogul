@@ -57,11 +57,10 @@ export const LightningWalletPanel = ({ gameState, onReceive, onZapPromo, onSellS
           </h2>
           <span className="text-xs font-black bg-white/25 rounded-full px-3 py-1 uppercase tracking-wide">Simulated sats · real tech</span>
         </div>
-        <p className="text-4xl font-black mt-2">{formatSats(gameState.sats)}</p>
-        <p className="text-sm font-bold text-white/85">
-          ≈ ${(gameState.sats / SATS_PER_USD).toFixed(2)} at game rate · Earned all time: {formatSats(gameState.totalSatsEarned)}
-          {gameState.lnLoanSats > 0 && <> · Loan owed: {formatSats(gameState.lnLoanSats)}</>}
-        </p>
+        <p className="text-4xl font-black mt-2 whitespace-nowrap overflow-hidden">{formatSats(gameState.sats)}</p>
+        <p className="text-sm font-bold text-white/85 whitespace-nowrap overflow-hidden">≈ ${(gameState.sats / SATS_PER_USD).toFixed(2)} at game rate</p>
+        <p className="text-sm font-bold text-white/85 whitespace-nowrap overflow-hidden">Earned all time: {formatSats(gameState.totalSatsEarned)}</p>
+        <p className="text-sm font-bold text-white/85 whitespace-nowrap overflow-hidden min-h-[1.25rem]">{gameState.lnLoanSats > 0 ? `Loan owed: ${formatSats(gameState.lnLoanSats)}` : ""}</p>
       </div>
 
       <div className="p-5 space-y-5">

@@ -44,14 +44,14 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
           </p>
           <span className="text-[10px] font-black bg-white/15 rounded-full px-2 py-0.5">SELF-CUSTODY · SIMULATED</span>
         </div>
-        <p className="font-black text-3xl sm:text-4xl mt-3 tabular-nums">{formatBtc(onchain)}</p>
-        <p className="text-sm font-bold text-amber-200/90 mt-0.5">= {formatSats(onchain)} · worth {formatCurrency(onchain / SATS_PER_USD)} at the game rate</p>
+        <p className="font-black text-3xl sm:text-4xl mt-3 tabular-nums whitespace-nowrap overflow-hidden">{formatBtc(onchain)}</p>
+        <p className="text-sm font-bold text-amber-200/90 mt-0.5 whitespace-nowrap overflow-hidden">= {formatSats(onchain)} · worth {formatCurrency(onchain / SATS_PER_USD)}</p>
         <p className="text-[11px] font-black text-white/70 mt-1">1 BTC = 100,000,000 sats. Sats are just slices of a bitcoin: stack enough of them and the decimals above start to move.</p>
         <p className="font-mono text-[11px] text-white/50 mt-2 truncate">bc1qgummogu1vau1t · in-game address, not a real wallet</p>
-        <div className="flex gap-2 mt-3 flex-wrap text-[11px] font-black">
-          <span className="bg-white/10 rounded-full px-2.5 py-1">🧾 {utxos.length} UTXO{utxos.length === 1 ? "" : "s"}</span>
-          <span className="bg-white/10 rounded-full px-2.5 py-1">⛽ {gameState.btcFeeRate} sats/vB today</span>
-          <span className="bg-white/10 rounded-full px-2.5 py-1">⚡ Lightning: {formatSats(gameState.sats)}</span>
+        <div className="flex gap-2 mt-3 flex-nowrap overflow-x-auto text-[11px] font-black [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <span className="bg-white/10 rounded-full px-2.5 py-1 shrink-0 whitespace-nowrap">🧾 {utxos.length} UTXO{utxos.length === 1 ? "" : "s"}</span>
+          <span className="bg-white/10 rounded-full px-2.5 py-1 shrink-0 whitespace-nowrap">⛽ {gameState.btcFeeRate} sats/vB today</span>
+          <span className="bg-white/10 rounded-full px-2.5 py-1 shrink-0 whitespace-nowrap">⚡ Lightning: {formatSats(gameState.sats)}</span>
         </div>
       </div>
 
