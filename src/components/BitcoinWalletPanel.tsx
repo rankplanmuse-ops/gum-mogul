@@ -6,7 +6,7 @@ import { GameState } from "@/types/game";
 import {
   formatCurrency, formatSats, formatBtc, BTC_ROUTES, SATS_PER_USD, consolidationFeeSats,
   MINING_EQUIPMENT_COST, MINING_MONTHLY_FEE, MINING_REQUIRES_REVENUE, miningMachineCost,
-  MINING_EXPECTED_WEEKLY_SATS,
+  MINING_EXPECTED_WEEKLY_SATS, miningMachineSatsCost, hasUpgrade,
 } from "@/lib/gameLogic";
 import { Bitcoin, ShieldCheck, Layers, Pickaxe } from "lucide-react";
 
@@ -15,7 +15,7 @@ interface Props {
   onBuyBtc: (routeId: string, usd: number) => void;
   onSweep: (amountSats: number) => void;
   onConsolidate: () => void;
-  onBuyMining: () => void;
+  onBuyMining: (payWithSats: boolean) => void;
   onToggleMining: () => void;
 }
 
@@ -119,7 +119,7 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
       <div className="mt-4 bg-white/80 rounded-2xl border-2 p-3">
         <p className="text-sm font-black flex items-center gap-1.5"><Pickaxe className="h-4 w-4 text-amber-600" /> Mining as a service</p>
         <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">
-          No KYC route that PRINTS bitcoin: a hosting company runs your machines. First machine {formatCurrency(MINING_EQUIPMENT_COST)}, then {formatCurrency(MINING_MONTHLY_FEE)}/month per machine in power and hosting, billed daily. Add as many machines as you like: every new one costs 15% more rack space, and fees and expected payouts scale with the fleet. Payouts land weekly in your wallet and swing hard with difficulty and uptime. Needs {formatCurrency(MINING_REQUIRES_REVENUE)} lifetime revenue to start.
+          No KYC route that PRINTS bitcoin: a hosting company runs your machines. First machine {formatCurrency(MINING_EQUIPMENT_COST)}, then {formatCurrency(MINING_MONTHLY_FEE)}/month per machine in power and hosting, billed daily and shown in your P&L. Add as many machines as you like: every new one costs 15% more rack space, and fees and expected payouts scale with the fleet. Machines are payable in cash or in sats: paying over Lightning takes 8% off the price. Payouts land weekly in your wallet and swing hard with difficulty and uptime. Needs {formatCurrency(MINING_REQUIRES_REVENUE)} lifetime revenue to start.
         </p>
         {gameState.miningOwned ? (
           <div className="mt-2 space-y-2">
@@ -128,8 +128,11 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
             </p>
             <p className="text-xs font-bold text-muted-foreground">Mined all time: {formatSats(gameState.miningTotalMined ?? 0)} · fees paid: {formatCurrency(gameState.miningTotalFees ?? 0)}</p>
             <div className="flex items-center gap-2 flex-wrap">
-              <Button onClick={onBuyMining} disabled={gameState.cash < miningMachineCost(gameState)} className="rounded-full font-black min-h-9">
+              <Button onClick={() => onBuyMining(false)} disabled={gameState.cash < miningMachineCost(gameState)} className="rounded-full font-black min-h-9">
                 Add machine #{(gameState.miningMachines ?? 1) + 1} ({formatCurrency(miningMachineCost(gameState))})
+              </Button>
+              <Button onClick={() => onBuyMining(true)} disabled={!hasUpgrade(gameState, "ln-terminal") || gameState.sats < miningMachineSatsCost(gameState)} variant="secondary" className="rounded-full font-black min-h-9">
+                ⚡ Add with {formatSats(miningMachineSatsCost(gameState))}
               </Button>
               <Button onClick={onToggleMining} variant={gameState.miningActive ? "destructive" : "default"} className="rounded-full font-black min-h-9">
                 {gameState.miningActive ? "Pause mining" : "Resume mining"}
@@ -137,9 +140,14 @@ export const BitcoinWalletPanel = ({ gameState, onBuyBtc, onSweep, onConsolidate
             </div>
           </div>
         ) : (
-          <Button onClick={onBuyMining} disabled={gameState.cash < MINING_EQUIPMENT_COST || gameState.totalRevenue < MINING_REQUIRES_REVENUE} className="rounded-full font-black mt-2">
-            Buy machine #1 {formatCurrency(MINING_EQUIPMENT_COST)}
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap mt-2">
+            <Button onClick={() => onBuyMining(false)} disabled={gameState.cash < MINING_EQUIPMENT_COST || gameState.totalRevenue < MINING_REQUIRES_REVENUE} className="rounded-full font-black">
+              Buy machine #1 {formatCurrency(MINING_EQUIPMENT_COST)}
+            </Button>
+            <Button onClick={() => onBuyMining(true)} disabled={gameState.totalRevenue < MINING_REQUIRES_REVENUE || !hasUpgrade(gameState, "ln-terminal") || gameState.sats < miningMachineSatsCost(gameState)} variant="secondary" className="rounded-full font-black">
+              ⚡ Buy with {formatSats(miningMachineSatsCost(gameState))}
+            </Button>
+          </div>
         )}
       </div>
     </Card>

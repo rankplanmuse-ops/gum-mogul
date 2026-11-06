@@ -58,11 +58,15 @@ export interface RestockLevel {
 }
 
 export const RESTOCK_LEVELS: RestockLevel[] = [
-  { id: "lean", name: "Lean", emoji: "🥗", blurb: "75% of forecast. Cheap to run, some empty slots.", factor: 0.75 },
-  { id: "standard", name: "Standard", emoji: "⚖️", blurb: "110% of forecast. The balanced default.", factor: 1.1 },
-  { id: "loaded", name: "Loaded", emoji: "🎒", blurb: "175% of forecast. Rarely sells out, more cash in jars.", factor: 1.75 },
-  { id: "maxout", name: "Max Out", emoji: "🚀", blurb: "Fill every jar to capacity. Never miss a sale, heavy cash tied up.", factor: 3 },
+  { id: "lean", name: "Lean", emoji: "🥗", blurb: "Fill jars to 60% of capacity, best sellers first. Keeps cash free.", factor: 0.6 },
+  { id: "standard", name: "Standard", emoji: "⚖️", blurb: "Fill every jar to capacity, split across gums by demand. The balanced default.", factor: 1 },
+  { id: "loaded", name: "Loaded", emoji: "🎒", blurb: "Fill to capacity, best sellers first when cash is tight.", factor: 1 },
+  { id: "maxout", name: "Max Out", emoji: "🚀", blurb: "Fill to capacity and round orders up to bulk discount tiers.", factor: 1 },
 ];
+
+// Daily hosting and power bill for the mining fleet (0 when not mining).
+export const miningDailyFee = (s: GameState): number =>
+  s.miningOwned && s.miningActive ? (MINING_MONTHLY_FEE * (s.miningMachines ?? 1)) / 30 : 0;
 
 export interface MarketingChannel {
   id: string;
@@ -653,13 +657,29 @@ export const consolidateUtxos = (state: GameState): ActionResult => {
 export const miningMachineCost = (state: GameState): number =>
   Math.round(MINING_EQUIPMENT_COST * Math.pow(1.15, state.miningMachines ?? (state.miningOwned ? 1 : 0)));
 
-export const buyMiningRig = (state: GameState): ActionResult => {
+// Sats price of the next machine at the game rate, with the 8% Lightning
+// supplier discount (paying in bitcoin is cheaper, like stock orders).
+export const miningMachineSatsCost = (state: GameState): number =>
+  Math.ceil(miningMachineCost(state) * SATS_PER_USD * (1 - LN_SUPPLIER_DISCOUNT));
+
+export const buyMiningRig = (state: GameState, payWithSats = false): ActionResult => {
   const machines = state.miningMachines ?? (state.miningOwned ? 1 : 0);
   if (machines === 0 && state.totalRevenue < MINING_REQUIRES_REVENUE) return { state, ok: false, message: `Mining unlocks at $${MINING_REQUIRES_REVENUE.toLocaleString()} lifetime revenue` };
   const cost = miningMachineCost(state);
-  if (state.cash < cost) return { state, ok: false, message: `Machine #${machines + 1} costs $${cost.toLocaleString()}` };
+  const satsCost = miningMachineSatsCost(state);
+  if (payWithSats) {
+    if (!hasUpgrade(state, "ln-terminal")) return { state, ok: false, message: "Paying in sats needs the Lightning Terminal upgrade" };
+    if (state.sats < satsCost) return { state, ok: false, message: `Machine #${machines + 1} costs ${satsCost.toLocaleString()} sats` };
+  } else if (state.cash < cost) {
+    return { state, ok: false, message: `Machine #${machines + 1} costs $${cost.toLocaleString()}` };
+  }
   const s = { ...state, log: [...state.log] };
-  s.cash -= cost;
+  if (payWithSats) {
+    s.sats -= satsCost;
+    s.lnTx = [{ id: nextId(), day: s.day, label: `Mining machine #${machines + 1} (8% sats discount)`, sats: -satsCost }, ...s.lnTx].slice(0, 40);
+  } else {
+    s.cash -= cost;
+  }
   s.miningMachines = machines + 1;
   s.miningOwned = true;
   s.miningActive = true;
@@ -713,39 +733,45 @@ export const toggleOngoingMarketing = (state: GameState, activityId: string): Ac
 export interface RefillLine { productId: string; qty: number; cost: number }
 export const refillLines = (state: GameState): RefillLine[] => {
   const level = RESTOCK_LEVELS.find((l) => l.id === state.restockLevel) ?? RESTOCK_LEVELS[1];
-  const passes = level.id === "maxout" ? [level.factor, 6] : [level.factor];
   const stock = new Map(state.products.map((p) => [p.id, p.stock]));
   const pf = purchaseFactor(state);
-  let room = stockCapacity(state) - totalStock(state);
+  const capacity = stockCapacity(state);
+  let room = capacity - totalStock(state);
   let cash = state.cash;
   const lines = new Map<string, RefillLine>();
-  for (const factor of passes) {
-    for (const p of state.products) {
-      if (!p.unlocked) continue;
-      const want = Math.ceil(forecastDemand(state, p) * factor);
-      let qty = Math.min(Math.max(0, want - (stock.get(p.id) ?? 0)), room);
-      while (qty > 0 && p.costPrice * qty * (1 - bulkDiscountFor(qty)) * pf > cash) qty -= 1;
-      // Bulk-tier optimisation: when an order lands just under a discount
-      // tier (25 / 50 / 100), round UP to the tier if jar room and cash
-      // allow. The extra gums are the cheapest you will ever buy them,
-      // and they shrink the next refill. Highest tier wins.
-      if (qty > 0) {
-        for (const tierQty of [25, 50, 100]) {
-          if (qty < tierQty && tierQty - qty <= Math.max(5, qty * 0.35)
-            && tierQty <= qty + room
-            && p.costPrice * tierQty * (1 - bulkDiscountFor(tierQty)) * pf <= cash) {
-            qty = tierQty;
-          }
+  // Fill the jars: every unlocked gum gets a share of total jar capacity,
+  // weighted by its forecast demand, and the fill level decides what
+  // fraction of capacity to aim for (Standard and up: full jars). Best
+  // sellers are stocked first, so when cash runs short the gums that
+  // actually sell are the ones sitting full.
+  const unlocked = state.products.filter((p) => p.unlocked);
+  const forecasts = unlocked.map((p) => ({ p, f: forecastDemand(state, p) })).sort((a, b) => b.f - a.f);
+  const totalF = forecasts.reduce((n, x) => n + x.f, 0);
+  const roundUpGap = level.id === "maxout" ? 0.6 : 0.35;
+  for (const { p, f } of forecasts) {
+    const share = totalF > 0 ? (capacity * f) / totalF : capacity / Math.max(1, unlocked.length);
+    const want = Math.ceil(share * level.factor);
+    let qty = Math.min(Math.max(0, want - (stock.get(p.id) ?? 0)), room);
+    while (qty > 0 && p.costPrice * qty * (1 - bulkDiscountFor(qty)) * pf > cash) qty -= 1;
+    // Bulk-tier optimisation: when an order lands just under a discount
+    // tier (25 / 50 / 100), round UP to the tier if jar room and cash
+    // allow. The extra gums are the cheapest you will ever buy them,
+    // and they shrink the next refill. Highest tier wins.
+    if (qty > 0) {
+      for (const tierQty of [25, 50, 100]) {
+        if (qty < tierQty && tierQty - qty <= Math.max(5, qty * roundUpGap)
+          && tierQty <= qty + room
+          && p.costPrice * tierQty * (1 - bulkDiscountFor(tierQty)) * pf <= cash) {
+          qty = tierQty;
         }
       }
-      if (qty > 0) {
-        const cost = p.costPrice * qty * (1 - bulkDiscountFor(qty)) * pf;
-        const prev = lines.get(p.id);
-        lines.set(p.id, { productId: p.id, qty: (prev?.qty ?? 0) + qty, cost: (prev?.cost ?? 0) + cost });
-        stock.set(p.id, (stock.get(p.id) ?? 0) + qty);
-        room -= qty;
-        cash -= cost;
-      }
+    }
+    if (qty > 0) {
+      const cost = p.costPrice * qty * (1 - bulkDiscountFor(qty)) * pf;
+      lines.set(p.id, { productId: p.id, qty, cost });
+      stock.set(p.id, (stock.get(p.id) ?? 0) + qty);
+      room -= qty;
+      cash -= cost;
     }
   }
   return [...lines.values()];
@@ -754,7 +780,7 @@ export const refillLines = (state: GameState): RefillLine[] => {
 export const refillJars = (state: GameState): ActionResult => {
   const lines = refillLines(state);
   const units = lines.reduce((n, l) => n + l.qty, 0);
-  if (units === 0) return { state, ok: false, message: "Jars already match the forecast (or the till is empty)" };
+  if (units === 0) return { state, ok: false, message: "Jars are already full (or the till is empty)" };
   const total = lines.reduce((n, l) => n + l.cost, 0);
   const s = { ...state, products: state.products.map((p) => ({ ...p })) };
   for (const line of lines) {
@@ -826,13 +852,14 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   const depreciation = totalMachines(s) * s.machineValueEach * s.depreciationRate;
   const cardFees = (revenue - lnRevenue) * CARD_FEE_RATE;
   const marketingCost = dailyMarketingCost(s);
-  const taxable = Math.max(0, revenue - productCost - rent - marketingCost - depreciation - cardFees);
+  const miningFees = miningDailyFee(s);
+  const taxable = Math.max(0, revenue - productCost - rent - marketingCost - depreciation - cardFees - miningFees);
   const tax = taxable * s.taxRate;
-  const netProfit = revenue - productCost - rent - marketingCost - depreciation - cardFees - tax;
+  const netProfit = revenue - productCost - rent - marketingCost - depreciation - cardFees - miningFees - tax;
 
   // Cash moves on real cash flows only: card+fiat sales land in the till,
   // Lightning sales land in the sats wallet, depreciation is value loss, not cash.
-  s.cash += revenue - lnRevenue - rent - marketingCost - cardFees - tax;
+  s.cash += revenue - lnRevenue - rent - marketingCost - cardFees - miningFees - tax;
   s.machineValueEach = Math.max(100, s.machineValueEach - s.machineValueEach * s.depreciationRate);
   s.totalRevenue += revenue;
 
@@ -861,8 +888,7 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   // some weeks beat the fees, some do not come close.
   if (s.miningOwned && s.miningActive) {
     const machines = s.miningMachines ?? 1;
-    const dailyFee = (MINING_MONTHLY_FEE * machines) / 30;
-    s.cash -= dailyFee;
+    const dailyFee = miningFees; // already charged in the P&L above
     s.miningTotalFees = (s.miningTotalFees ?? 0) + dailyFee;
     if (finishedDay % 7 === 0) {
       const mult = rand() < 0.1 ? 0 : 0.3 + rand() * 1.9;
@@ -905,7 +931,7 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   }
 
   s.lastDay = {
-    revenue, productCost, rent, marketing: marketingCost, depreciation, cardFees, tax,
+    revenue, productCost, rent, marketing: marketingCost, depreciation, cardFees, miningFees, tax,
     netProfit, satsEarned, unitsSold, unitsStockedOut: stockedOut, lnShare,
   };
   s.history = [...s.history, { day: finishedDay, revenue, netProfit, satsEarned, unitsSold }].slice(-60);
@@ -978,9 +1004,10 @@ export const forecastCosts = (s: GameState): CostBreakdown => {
   const depreciation = totalMachines(s) * s.machineValueEach * s.depreciationRate;
   const cardFees = (revenue - lnRevenue) * CARD_FEE_RATE;
   const marketingCost = dailyMarketingCost(s);
-  const taxable = Math.max(0, revenue - productCost - rent - marketingCost - depreciation - cardFees);
+  const miningFees = miningDailyFee(s);
+  const taxable = Math.max(0, revenue - productCost - rent - marketingCost - depreciation - cardFees - miningFees);
   const tax = taxable * s.taxRate;
-  return { revenue, productCost, rent, marketing: marketingCost, depreciation, cardFees, tax, netProfit: revenue - productCost - rent - marketingCost - depreciation - cardFees - tax };
+  return { revenue, productCost, rent, marketing: marketingCost, depreciation, cardFees, miningFees, tax, netProfit: revenue - productCost - rent - marketingCost - depreciation - cardFees - miningFees - tax };
 };
 
 export const formatCurrency = (amount: number): string =>
