@@ -61,9 +61,12 @@ export const BankPanel = ({ gameState, onTakeLoan, onRepay }: Props) => {
                 <p className="text-[11px] font-semibold text-muted-foreground">
                   {tier.blurb} You repay {formatCurrency(tier.amount * (1 + tier.interest))} total.
                 </p>
+                {blocker !== null && (
+                  <p className="text-[11px] font-black text-rose-600 mt-1">🔒 Unavailable: {blocker}</p>
+                )}
               </div>
               <Button onClick={() => onTakeLoan(tier.id)} disabled={blocker !== null} className="rounded-full font-black shrink-0">
-                {blocker === null ? "Borrow" : blocker}
+                {blocker === null ? "Borrow" : "Locked"}
               </Button>
             </div>
           );
