@@ -59,6 +59,17 @@ export interface LnTx {
   sats: number;
 }
 
+// One unspent transaction output in the on-chain self-custody wallet.
+// Every acquisition creates one; spending later pays per input, which is
+// the whole UTXO management lesson.
+export interface Utxo {
+  id: number;
+  day: number;
+  sats: number;
+  source: string; // route label, e.g. "KYC Exchange", "P2P Trade", "Mining payout"
+  kyc: boolean; // identity-linked at purchase: carries data-hack risk
+}
+
 export interface GameEvent {
   id: string;
   icon: string;
@@ -82,6 +93,18 @@ export interface LastDaySummary {
   lnShare: number;
 }
 
+// One loan from the Gum Bank. Several can run at once, as long as total
+// debt stays within the bank's loan-to-value limit on your assets.
+export interface BankLoan {
+  id: number;
+  tierId: string;
+  name: string;
+  emoji: string;
+  principal: number;
+  owed: number;
+  dayTaken: number;
+}
+
 export interface GameState {
   cash: number;
   sats: number;
@@ -94,7 +117,17 @@ export interface GameState {
   upgrades: Upgrade[];
   marketingSpend: number;
   promoDays: Record<string, number>; // marketing channel id -> days of boost left
-  bankLoan: number; // USD still owed to the Gum Bank, 0 = no loan
+  ongoingMarketing: string[]; // always-on marketing activity ids currently running
+  milestonesClaimed: number; // rungs of the net-worth ladder already rewarded
+  btcOnchainSats: number; // self-custody on-chain balance (sum of utxos)
+  utxos: Utxo[];
+  btcFeeRate: number; // current mempool fee, sats per vByte, drifts daily
+  miningOwned: boolean;
+  miningActive: boolean;
+  miningTotalFees: number; // USD paid in service fees, all time
+  miningTotalMined: number; // sats mined, all time
+  loans: BankLoan[]; // every active Gum Bank loan
+  bankLoan: number; // mirror of total owed across loans (older saves/readers)
   bankLoanTier: string | null;
   restockLevel: string; // id into RESTOCK_LEVELS, used by the Restock Bot
   taxRate: number;

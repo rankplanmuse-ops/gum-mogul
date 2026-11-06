@@ -5,6 +5,7 @@ import {
   GameEvent,
   Location,
   Upgrade,
+  Utxo,
 } from "@/types/game";
 
 // ---- Constants the whole game is tuned around ------------------------------
@@ -12,7 +13,39 @@ export const SATS_PER_USD = 1000; // game rate, kept round so the maths is teach
 export const MACHINE_COST = 400;
 export const MAX_MACHINES_PER_LOCATION = 3;
 export const MACHINE_BASE_VALUE = 500;
-export const MOGUL_NET_WORTH = 25000;
+export const MOGUL_NET_WORTH = 250000; // the headline goal: Gum Tycoon
+
+// ---- The milestone ladder ----------------------------------------------------
+// Net-worth rungs at x10 steps: $2.5k, $25k, $250k, $2.5M, and on forever.
+// Each rung pays a reward the moment your net worth crosses it: cash worth
+// 10% of the rung plus the rung number again in sats.
+export interface Milestone {
+  threshold: number;
+  title: string;
+  emoji: string;
+  cashReward: number;
+  satsReward: number;
+}
+
+const MILESTONE_TITLES: { title: string; emoji: string }[] = [
+  { title: "Gum Getter", emoji: "🌱" },
+  { title: "GUM MOGUL", emoji: "👑" },
+  { title: "Gum Tycoon", emoji: "🏙️" },
+  { title: "Gum Empire", emoji: "🏦" },
+  { title: "Gum Legend", emoji: "🌟" },
+  { title: "Gum Myth", emoji: "🔮" },
+];
+
+export const milestoneAt = (index: number): Milestone => {
+  const threshold = 2500 * Math.pow(10, index);
+  const t = MILESTONE_TITLES[index] ?? { title: `Gum Myth ${index - 4}`, emoji: "🔮" };
+  return { threshold, title: t.title, emoji: t.emoji, cashReward: threshold / 10, satsReward: threshold };
+};
+
+export const nextMilestone = (s: GameState): Milestone => milestoneAt(s.milestonesClaimed ?? 0);
+
+export const currentRank = (s: GameState): string =>
+  (s.milestonesClaimed ?? 0) > 0 ? milestoneAt((s.milestonesClaimed ?? 1) - 1).title : "Rookie";
 export const CARD_FEE_RATE = 0.029; // what card sales cost you
 export const LN_CUSTOMER_SHARE = 0.45; // share of sales paid over Lightning once you own a terminal
 export const LN_SUPPLIER_DISCOUNT = 0.08; // paying suppliers over Lightning is 8% cheaper
@@ -52,6 +85,37 @@ export const MARKETING_CHANNELS: MarketingChannel[] = [
 export const promoFactor = (s: GameState): number =>
   MARKETING_CHANNELS.reduce((f, c) => ((s.promoDays?.[c.id] ?? 0) > 0 ? f * c.factor : f), 1);
 
+export interface OngoingMarketing {
+  id: string;
+  name: string;
+  emoji: string;
+  blurb: string;
+  dailyCost: number;
+  factor: number; // demand multiplier while running
+  requiresRevenue: number; // lifetime revenue needed to start it
+}
+
+// Always-on marketing: toggle an activity on and it runs every day, billed
+// daily, boosting demand until you switch it off. The bigger ones unlock as
+// lifetime revenue grows, so marketing scales with the empire.
+export const ONGOING_MARKETING: OngoingMarketing[] = [
+  { id: "loyalty", name: "Loyalty Card Club", emoji: "💳", blurb: "Punch cards in every machine. Regulars build a daily habit.", dailyCost: 8, factor: 1.06, requiresRevenue: 0 },
+  { id: "schools", name: "School Team Sponsor", emoji: "🏆", blurb: "Your logo on the local team kit. Kids and parents chew your colours.", dailyCost: 18, factor: 1.1, requiresRevenue: 250 },
+  { id: "influencer", name: "Influencer Retainer", emoji: "🤳", blurb: "A local creator pops your gum in every video, every single day.", dailyCost: 40, factor: 1.16, requiresRevenue: 1500 },
+  { id: "billboard", name: "Billboard Lease", emoji: "🪧", blurb: "A giant bubblegum billboard over the busiest road in town.", dailyCost: 85, factor: 1.22, requiresRevenue: 6000 },
+  { id: "podcast", name: "Podcast Sponsorship", emoji: "🎙️", blurb: "A daily read on the city's biggest podcast. Mid-roll, every episode.", dailyCost: 160, factor: 1.28, requiresRevenue: 20000 },
+  { id: "transit", name: "City Transit Ads", emoji: "🚌", blurb: "Every bus and tram wrapped in your colours, citywide, always on.", dailyCost: 300, factor: 1.35, requiresRevenue: 60000 },
+];
+
+export const ongoingFactor = (s: GameState): number =>
+  ONGOING_MARKETING.reduce((f, a) => ((s.ongoingMarketing ?? []).includes(a.id) ? f * a.factor : f), 1);
+
+export const ongoingDailyCost = (s: GameState): number =>
+  ONGOING_MARKETING.reduce((n, a) => ((s.ongoingMarketing ?? []).includes(a.id) ? n + a.dailyCost : n), 0);
+
+// Total daily marketing bill: slider spend plus every always-on activity.
+export const dailyMarketingCost = (s: GameState): number => s.marketingSpend + ongoingDailyCost(s);
+
 export interface LoanTier {
   id: string;
   name: string;
@@ -63,8 +127,39 @@ export interface LoanTier {
 }
 
 // Gum Bank loans: cash now, repaid automatically from 10% of daily revenue
-// (manual repayments any time). One loan at a time. Owed counts against
-// net worth, so borrowing to buy machines is a real decision.
+// (manual repayments any time). Several loans can run at once: the bank
+// lends against your asset value, up to 50% loan-to-value across all loans,
+// max 5 at a time. Owed counts against net worth.
+export const MAX_LOANS = 5;
+export const LOAN_LTV = 0.5;
+
+export const assetValue = (s: GameState): number =>
+  s.cash +
+  s.sats / SATS_PER_USD +
+  (s.btcOnchainSats ?? 0) / SATS_PER_USD +
+  s.locations.reduce((n, l) => n + l.machines, 0) * s.machineValueEach +
+  s.products.reduce((n, p) => n + p.stock * p.costPrice, 0);
+
+export const totalBankOwed = (s: GameState): number =>
+  (s.loans ?? []).length > 0
+    ? (s.loans ?? []).reduce((n, l) => n + l.owed, 0)
+    : (s.bankLoan ?? 0);
+
+// Can this tier still be added? Returns an error string, or null if fine.
+export const loanBlocker = (s: GameState, tier: LoanTier): string | null => {
+  if (s.totalRevenue < tier.requiresRevenue) return `Needs $${tier.requiresRevenue.toLocaleString()} lifetime revenue`;
+  if ((s.loans ?? []).length >= MAX_LOANS) return `Max ${MAX_LOANS} loans at once`;
+  const newOwed = Math.round(tier.amount * (1 + tier.interest));
+  const maxOwed = LOAN_LTV * (assetValue(s) + tier.amount);
+  if (totalBankOwed(s) + newOwed > maxOwed) return "Not enough asset value (50% loan-to-value cap)";
+  return null;
+};
+
+const syncLoanMirror = (s: GameState) => {
+  s.bankLoan = (s.loans ?? []).reduce((n, l) => n + l.owed, 0);
+  s.bankLoanTier = (s.loans ?? [])[0]?.tierId ?? null;
+};
+
 export const LOAN_TIERS: LoanTier[] = [
   { id: "starter", name: "Starter Loan", emoji: "🐷", amount: 250, interest: 0.2, requiresRevenue: 0, blurb: "Anyone qualifies. Pricey money for tight spots." },
   { id: "growth", name: "Growth Loan", emoji: "📈", amount: 1000, interest: 0.15, requiresRevenue: 500, blurb: "Needs $500 lifetime revenue. The expansion classic." },
@@ -74,32 +169,35 @@ export const LOAN_TIERS: LoanTier[] = [
 export const takeLoan = (state: GameState, tierId: string): ActionResult => {
   const tier = LOAN_TIERS.find((t) => t.id === tierId);
   if (!tier) return { state, ok: false, message: "Unknown loan" };
-  if ((state.bankLoan ?? 0) > 0) return { state, ok: false, message: "One loan at a time: clear the current one first" };
-  if (state.totalRevenue < tier.requiresRevenue) return { state, ok: false, message: `${tier.name} needs $${tier.requiresRevenue.toLocaleString()} lifetime revenue (you have $${Math.floor(state.totalRevenue).toLocaleString()})` };
-  const s = { ...state, log: [...state.log] };
+  const blocker = loanBlocker(state, tier);
+  if (blocker) return { state, ok: false, message: `${tier.name}: ${blocker}` };
+  const s = { ...state, loans: (state.loans ?? []).map((l) => ({ ...l })), log: [...state.log] };
   const owed = Math.round(tier.amount * (1 + tier.interest));
   s.cash += tier.amount;
-  s.bankLoan = owed;
-  s.bankLoanTier = tier.id;
-  pushLog(s, tier.emoji, `${tier.name} approved: $${tier.amount.toLocaleString()} in the till. You owe $${owed.toLocaleString()} (interest included), repaid from 10% of daily revenue.`, "info");
-  return { state: s, ok: true, message: `${tier.name}: $${tier.amount.toLocaleString()} borrowed` };
+  s.loans = [...s.loans, { id: nextId(), tierId: tier.id, name: tier.name, emoji: tier.emoji, principal: tier.amount, owed, dayTaken: s.day }];
+  syncLoanMirror(s);
+  pushLog(s, tier.emoji, `${tier.name} approved: $${tier.amount.toLocaleString()} in the till. You owe $${owed.toLocaleString()} on this one (interest included); total bank debt is now $${s.bankLoan.toLocaleString()}, repaid from 10% of daily revenue, oldest first.`, "info");
+  return { state: s, ok: true, message: `${tier.name}: $${tier.amount.toLocaleString()} borrowed (${s.loans.length} loan${s.loans.length === 1 ? "" : "s"} running)` };
 };
 
-export const repayLoan = (state: GameState, amount: number): ActionResult => {
-  const owed = state.bankLoan ?? 0;
-  if (owed <= 0) return { state, ok: false, message: "No loan to repay" };
-  const pay = Math.min(amount, owed, state.cash);
+export const repayLoan = (state: GameState, amount: number, loanId?: number): ActionResult => {
+  const loans = state.loans ?? [];
+  const loan = loanId !== undefined ? loans.find((l) => l.id === loanId) : loans[0];
+  if (!loan) return { state, ok: false, message: "No loan to repay" };
+  const pay = Math.min(amount, loan.owed, state.cash);
   if (pay <= 0) return { state, ok: false, message: "No spare cash to repay with" };
-  const s = { ...state, log: [...state.log] };
+  const s = { ...state, loans: loans.map((l) => ({ ...l })), log: [...state.log] };
+  const target = s.loans.find((l) => l.id === loan.id)!;
   s.cash -= pay;
-  s.bankLoan = owed - pay;
-  if (s.bankLoan <= 0.005) {
-    s.bankLoan = 0;
-    s.bankLoanTier = null;
-    pushLog(s, "🎉", "Bank loan fully repaid. The Gum Bank stamps your file: RELIABLE.", "unlock");
-    return { state: s, ok: true, message: "Loan fully repaid 🎉" };
+  target.owed -= pay;
+  if (target.owed <= 0.005) {
+    s.loans = s.loans.filter((l) => l.id !== loan.id);
+    syncLoanMirror(s);
+    pushLog(s, "🎉", `${loan.name} fully repaid. The Gum Bank stamps your file: RELIABLE.`, "unlock");
+    return { state: s, ok: true, message: `${loan.name} fully repaid 🎉` };
   }
-  return { state: s, ok: true, message: `Repaid $${pay.toFixed(2)} ($${s.bankLoan.toFixed(2)} left)` };
+  syncLoanMirror(s);
+  return { state: s, ok: true, message: `Repaid $${pay.toFixed(2)} on ${loan.name} ($${target.owed.toFixed(2)} left)` };
 };
 
 // Bulk buying: the supplier rewards bigger orders. Applies to cash and sats
@@ -215,6 +313,16 @@ export const freshState = (): GameState => ({
   upgrades: INITIAL_UPGRADES.map((u) => ({ ...u })),
   marketingSpend: 3,
   promoDays: {},
+  ongoingMarketing: [],
+  milestonesClaimed: 0,
+  btcOnchainSats: 0,
+  utxos: [],
+  btcFeeRate: 12,
+  miningOwned: false,
+  miningActive: false,
+  miningTotalFees: 0,
+  miningTotalMined: 0,
+  loans: [],
   bankLoan: 0,
   bankLoanTier: null,
   restockLevel: "standard",
@@ -262,10 +370,11 @@ export const totalStock = (s: GameState) =>
 export const netWorth = (s: GameState) =>
   s.cash +
   s.sats / SATS_PER_USD +
+  (s.btcOnchainSats ?? 0) / SATS_PER_USD +
   totalMachines(s) * s.machineValueEach +
   s.products.reduce((n, p) => n + p.stock * p.costPrice, 0) -
   s.lnLoanSats / SATS_PER_USD -
-  (s.bankLoan ?? 0);
+  totalBankOwed(s);
 
 export const priceFactor = (p: Product) => {
   const f = Math.pow(p.refPrice / Math.max(0.01, p.sellPrice), 1.6);
@@ -280,7 +389,7 @@ export const forecastDemand = (s: GameState, p: Product): number => {
   const displays = hasUpgrade(s, "displays") ? 1.12 : 1;
   const event = s.pendingEvent?.demandFactor ?? 1;
   const zap = s.zapBoostDays > 0 ? 1.3 : 1;
-  return p.baseDemand * trafficUnits(s) * priceFactor(p) * marketing * reputation * neon * displays * event * zap * promoFactor(s);
+  return p.baseDemand * trafficUnits(s) * priceFactor(p) * marketing * reputation * neon * displays * event * zap * promoFactor(s) * ongoingFactor(s);
 };
 
 const pushLog = (s: GameState, icon: string, text: string, kind: GameState["log"][number]["kind"]) => {
@@ -424,10 +533,11 @@ export const zapPromo = (state: GameState): ActionResult => {
   if (state.sats < ZAP_PROMO_COST_SATS) return { state, ok: false, message: `Zap promo costs ${ZAP_PROMO_COST_SATS.toLocaleString()} sats` };
   const s = { ...state, lnTx: [...state.lnTx], log: [...state.log] };
   s.sats -= ZAP_PROMO_COST_SATS;
-  s.zapBoostDays = Math.max(s.zapBoostDays, 2);
+  // Days stack: every zap buys 2 MORE days of boost, even mid-promo.
+  s.zapBoostDays = (s.zapBoostDays ?? 0) + 2;
   s.lnTx = [{ id: nextId(), day: s.day, label: "Zap promo: sponsored posts on Nostr", sats: -ZAP_PROMO_COST_SATS }, ...s.lnTx].slice(0, 40);
-  pushLog(s, "📣", "Zap promo live: +30% demand for 2 days. The internet loves a zap.", "ln");
-  return { state: s, ok: true, message: "Zap promo live for 2 days" };
+  pushLog(s, "📣", `Zap promo extended: +30% demand, now running for ${s.zapBoostDays} day${s.zapBoostDays === 1 ? "" : "s"} total. The internet loves a zap.`, "ln");
+  return { state: s, ok: true, message: `Zap promo: +2 days (${s.zapBoostDays} days of boost banked)` };
 };
 
 export const takeRescueLoan = (state: GameState): ActionResult => {
@@ -453,6 +563,106 @@ export const sellSats = (state: GameState, amount: number): ActionResult => {
   return { state: s, ok: true, message: `Sold ${amount.toLocaleString()} sats` };
 };
 
+// ---- On-chain Bitcoin: self-custody wallet, UTXOs, acquisition routes --------
+// Fiat profits can be turned into real (simulated) on-chain bitcoin. Every
+// route lands as its own UTXO in YOUR wallet: self-custody, no exchange
+// account. Routes differ in fees and in risk, and that is the lesson.
+export interface BtcRoute {
+  id: string;
+  name: string;
+  emoji: string;
+  blurb: string;
+  feePct: number; // share of the purchase lost to fees/premium
+  kyc: boolean;
+  riskNote: string;
+}
+
+export const BTC_ROUTES: BtcRoute[] = [
+  { id: "exchange", name: "KYC Exchange", emoji: "🏛️", blurb: "Cheapest way in. Sign up with your ID, buy, withdraw to your wallet.", feePct: 0.008, kyc: true, riskNote: "Your name, ID and address sit in their database. Exchanges get hacked: leaked KYC data has led to wrench attacks and significant bitcoin losses. These UTXOs stay identity-linked." },
+  { id: "p2p", name: "P2P Trade", emoji: "🤝", blurb: "Buy face to face or peer to peer, cash for sats. No ID database.", feePct: 0.05, kyc: false, riskNote: "You pay about 5% over the exchange price for privacy. No central database of you exists to hack." },
+  { id: "atm", name: "Bitcoin ATM", emoji: "🏧", blurb: "Feed cash into a machine, scan your wallet QR, done. Instant and simple.", feePct: 0.15, kyc: false, riskNote: "Convenience costs: about 15% in fees and spread. Fine for small amounts, brutal for big ones." },
+];
+
+export const MINING_EQUIPMENT_COST = 7500;
+export const MINING_MONTHLY_FEE = 1500;
+export const MINING_REQUIRES_REVENUE = 5000;
+export const MINING_EXPECTED_WEEKLY_SATS = 385000; // about $385/week at game rate, before variance
+
+const addUtxo = (s: GameState, sats: number, source: string, kyc: boolean) => {
+  const utxo: Utxo = { id: nextId(), day: s.day, sats, source, kyc };
+  s.utxos = [...(s.utxos ?? []), utxo];
+  s.btcOnchainSats = (s.btcOnchainSats ?? 0) + sats;
+};
+
+export const buyBtc = (state: GameState, routeId: string, usdAmount: number): ActionResult => {
+  const route = BTC_ROUTES.find((r) => r.id === routeId);
+  if (!route) return { state, ok: false, message: "Unknown route" };
+  if (usdAmount < 10) return { state, ok: false, message: "Minimum buy is $10" };
+  if (state.cash < usdAmount) return { state, ok: false, message: `You need $${usdAmount.toLocaleString()} cash for that buy` };
+  const s = { ...state, utxos: [...(state.utxos ?? [])], log: [...state.log] };
+  const received = Math.floor(usdAmount * SATS_PER_USD * (1 - route.feePct));
+  s.cash -= usdAmount;
+  addUtxo(s, received, route.name, route.kyc);
+  pushLog(s, route.emoji, `Bought ${received.toLocaleString()} sats on-chain via ${route.name} for $${usdAmount.toLocaleString()} (${(route.feePct * 100).toFixed(1)}% in fees). New UTXO in your self-custody wallet.${route.kyc ? " It is identity-linked to your exchange account." : ""}`, "ln");
+  return { state: s, ok: true, message: `+${received.toLocaleString()} sats on-chain via ${route.name}` };
+};
+
+export const sweepLightningToChain = (state: GameState, amountSats: number): ActionResult => {
+  if (amountSats < 10000) return { state, ok: false, message: "Sweep at least 10,000 sats (small UTXOs cost more in future fees than they are worth)" };
+  if (state.sats < amountSats) return { state, ok: false, message: "Not enough Lightning sats" };
+  const swapFee = Math.ceil(amountSats * 0.01);
+  const chainFee = Math.ceil(140 * (state.btcFeeRate ?? 12));
+  const received = amountSats - swapFee - chainFee;
+  if (received <= 0) return { state, ok: false, message: "Fees would eat the whole sweep at this size" };
+  const s = { ...state, utxos: [...(state.utxos ?? [])], log: [...state.log] };
+  s.sats -= amountSats;
+  addUtxo(s, received, "Lightning sweep", false);
+  pushLog(s, "🔄", `Swept ${amountSats.toLocaleString()} sats from Lightning to your on-chain wallet: ${received.toLocaleString()} sats landed as one UTXO (1% swap fee + ${chainFee.toLocaleString()} sats chain fee).`, "ln");
+  return { state: s, ok: true, message: `Swept to chain: ${received.toLocaleString()} sats as one UTXO` };
+};
+
+// Estimated fee to merge every UTXO into one, at the current mempool rate.
+// SegWit maths, simplified: 10 vB overhead + 68 vB per input + 31 vB output.
+export const consolidationFeeSats = (s: GameState): number => {
+  const n = (s.utxos ?? []).length;
+  if (n < 2) return 0;
+  return Math.ceil((10 + 68 * n + 31) * (s.btcFeeRate ?? 12));
+};
+
+export const consolidateUtxos = (state: GameState): ActionResult => {
+  const utxos = state.utxos ?? [];
+  if (utxos.length < 2) return { state, ok: false, message: "Nothing to consolidate yet (you need 2+ UTXOs)" };
+  const fee = consolidationFeeSats(state);
+  const total = utxos.reduce((n, u) => n + u.sats, 0);
+  if (total <= fee) return { state, ok: false, message: "The consolidation fee would eat the whole balance. Wait for lower fees or a bigger balance." };
+  const mixedKyc = utxos.some((u) => u.kyc);
+  const s = { ...state, log: [...state.log] };
+  s.utxos = [{ id: nextId(), day: s.day, sats: total - fee, source: "Consolidated", kyc: mixedKyc }];
+  s.btcOnchainSats = total - fee;
+  pushLog(s, "🧹", `Consolidated ${utxos.length} UTXOs into 1 for a ${fee.toLocaleString()} sat fee at ${s.btcFeeRate} sats/vB. Future spends now need a single input.${mixedKyc ? " Note: mixing KYC and non-KYC coins makes the whole output identity-linked." : ""}`, "ln");
+  return { state: s, ok: true, message: `Consolidated ${utxos.length} UTXOs into 1 (fee ${fee.toLocaleString()} sats)` };
+};
+
+export const buyMiningRig = (state: GameState): ActionResult => {
+  if (state.miningOwned) return { state, ok: false, message: "You already run a mining setup" };
+  if (state.totalRevenue < MINING_REQUIRES_REVENUE) return { state, ok: false, message: `Mining unlocks at $${MINING_REQUIRES_REVENUE.toLocaleString()} lifetime revenue` };
+  if (state.cash < MINING_EQUIPMENT_COST) return { state, ok: false, message: `Equipment costs $${MINING_EQUIPMENT_COST.toLocaleString()}` };
+  const s = { ...state, log: [...state.log] };
+  s.cash -= MINING_EQUIPMENT_COST;
+  s.miningOwned = true;
+  s.miningActive = true;
+  pushLog(s, "⛏️", `Mining as a service is live: $${MINING_EQUIPMENT_COST.toLocaleString()} of equipment installed at a hosting facility, $${MINING_MONTHLY_FEE.toLocaleString()}/month in hosting and power. Payouts land weekly, straight to your wallet. Difficulty and uptime mean some weeks pay well and some do not cover the fees.`, "ln");
+  return { state: s, ok: true, message: "Mining live: weekly payouts to your wallet" };
+};
+
+export const toggleMining = (state: GameState): ActionResult => {
+  if (!state.miningOwned) return { state, ok: false, message: "No mining setup yet" };
+  const s = { ...state, log: [...state.log] };
+  s.miningActive = !state.miningActive;
+  pushLog(s, "⛏️", s.miningActive ? "Mining resumed: hosting fees and weekly payouts are on again." : "Mining paused: no hosting fees, no payouts. The equipment sits idle.", "info");
+  return { state: s, ok: true, message: s.miningActive ? "Mining on" : "Mining paused" };
+};
+
 export const buyMarketing = (state: GameState, channelId: string): ActionResult => {
   const channel = MARKETING_CHANNELS.find((c) => c.id === channelId);
   if (!channel) return { state, ok: false, message: "Unknown campaign" };
@@ -462,6 +672,24 @@ export const buyMarketing = (state: GameState, channelId: string): ActionResult 
   s.promoDays[channel.id] = Math.max(s.promoDays[channel.id] ?? 0, channel.days);
   pushLog(s, channel.emoji, `${channel.name} launched: +${Math.round((channel.factor - 1) * 100)}% demand for ${channel.days} days. ${channel.blurb}`, "info");
   return { state: s, ok: true, message: `${channel.name} live for ${channel.days} days` };
+};
+
+export const toggleOngoingMarketing = (state: GameState, activityId: string): ActionResult => {
+  const activity = ONGOING_MARKETING.find((a) => a.id === activityId);
+  if (!activity) return { state, ok: false, message: "Unknown activity" };
+  const active = (state.ongoingMarketing ?? []).includes(activity.id);
+  if (!active && state.totalRevenue < activity.requiresRevenue) {
+    return { state, ok: false, message: `${activity.name} unlocks at $${activity.requiresRevenue.toLocaleString()} lifetime revenue (you have $${Math.floor(state.totalRevenue).toLocaleString()})` };
+  }
+  const s = { ...state, ongoingMarketing: [...(state.ongoingMarketing ?? [])], log: [...state.log] };
+  if (active) {
+    s.ongoingMarketing = s.ongoingMarketing.filter((id) => id !== activity.id);
+    pushLog(s, activity.emoji, `${activity.name} switched off. The $${activity.dailyCost}/day bill stops tonight.`, "info");
+    return { state: s, ok: true, message: `${activity.name} off` };
+  }
+  s.ongoingMarketing = [...s.ongoingMarketing, activity.id];
+  pushLog(s, activity.emoji, `${activity.name} is live: +${Math.round((activity.factor - 1) * 100)}% demand every day for $${activity.dailyCost}/day, until you stop it.`, "info");
+  return { state: s, ok: true, message: `${activity.name} live (+${Math.round((activity.factor - 1) * 100)}% demand, $${activity.dailyCost}/day)` };
 };
 
 // ---- Manual refill -------------------------------------------------------------------
@@ -533,6 +761,9 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
     lnTx: [...input.lnTx],
     achievements: [...input.achievements],
     promoDays: { ...(input.promoDays ?? {}) },
+    ongoingMarketing: [...(input.ongoingMarketing ?? [])],
+    utxos: (input.utxos ?? []).map((u) => ({ ...u })),
+    loans: (input.loans ?? []).map((l) => ({ ...l })),
   };
   const finishedDay = s.day;
 
@@ -545,7 +776,7 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
     }
   }
 
-  let revenue = 0, productCost = 0, unitsSold = 0, stockedOut = 0;
+  let revenue = 0, productCost = 0, unitsSold = 0, stockedOut = 0, lossLeaderUnits = 0;
   for (const p of s.products) {
     if (!p.unlocked) continue;
     const mean = forecastDemand(s, p);
@@ -556,6 +787,9 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
     unitsSold += sold;
     revenue += sold * p.sellPrice;
     productCost += sold * p.costPrice;
+    // Priced at or under cost, a gum is a loss leader: it loses money per
+    // unit and buys reputation and foot traffic instead.
+    if (p.sellPrice <= p.costPrice) lossLeaderUnits += sold;
   }
 
   const lnShare = hasUpgrade(s, "ln-terminal") ? LN_CUSTOMER_SHARE : 0;
@@ -576,25 +810,56 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   const rent = dailyRent(s);
   const depreciation = totalMachines(s) * s.machineValueEach * s.depreciationRate;
   const cardFees = (revenue - lnRevenue) * CARD_FEE_RATE;
-  const taxable = Math.max(0, revenue - productCost - rent - s.marketingSpend - depreciation - cardFees);
+  const marketingCost = dailyMarketingCost(s);
+  const taxable = Math.max(0, revenue - productCost - rent - marketingCost - depreciation - cardFees);
   const tax = taxable * s.taxRate;
-  const netProfit = revenue - productCost - rent - s.marketingSpend - depreciation - cardFees - tax;
+  const netProfit = revenue - productCost - rent - marketingCost - depreciation - cardFees - tax;
 
   // Cash moves on real cash flows only: card+fiat sales land in the till,
   // Lightning sales land in the sats wallet, depreciation is value loss, not cash.
-  s.cash += revenue - lnRevenue - rent - s.marketingSpend - cardFees - tax;
+  s.cash += revenue - lnRevenue - rent - marketingCost - cardFees - tax;
   s.machineValueEach = Math.max(100, s.machineValueEach - s.machineValueEach * s.depreciationRate);
   s.totalRevenue += revenue;
 
-  // Gum Bank auto-repayment: 10% of today's revenue, straight off the loan.
-  if ((s.bankLoan ?? 0) > 0 && revenue > 0) {
-    const payment = Math.min(s.bankLoan, revenue * 0.1);
-    s.cash -= payment;
-    s.bankLoan -= payment;
-    if (s.bankLoan <= 0.005) {
-      s.bankLoan = 0;
-      s.bankLoanTier = null;
-      pushLog(s, "🎉", "The daily skim just paid off your bank loan in full.", "unlock");
+  // Gum Bank auto-repayment: 10% of today's revenue pays loans down,
+  // oldest first, until the pool runs out.
+  if ((s.loans ?? []).length > 0 && revenue > 0) {
+    let pool = revenue * 0.1;
+    for (const loan of s.loans) {
+      if (pool <= 0) break;
+      const pay = Math.min(loan.owed, pool, s.cash);
+      if (pay <= 0) break;
+      loan.owed -= pay;
+      s.cash -= pay;
+      pool -= pay;
+    }
+    const cleared = s.loans.filter((l) => l.owed <= 0.005);
+    if (cleared.length) {
+      s.loans = s.loans.filter((l) => l.owed > 0.005);
+      cleared.forEach((l) => pushLog(s, "🎉", `The daily skim just paid off your ${l.name} in full.`, "unlock"));
+    }
+    syncLoanMirror(s);
+  }
+
+  // Mining as a service: hosting and power are billed daily, payouts land
+  // weekly as a fresh UTXO. Difficulty and downtime make the payout swing:
+  // some weeks beat the fees, some do not come close.
+  if (s.miningOwned && s.miningActive) {
+    const dailyFee = MINING_MONTHLY_FEE / 30;
+    s.cash -= dailyFee;
+    s.miningTotalFees = (s.miningTotalFees ?? 0) + dailyFee;
+    if (finishedDay % 7 === 0) {
+      const mult = rand() < 0.1 ? 0 : 0.3 + rand() * 1.9;
+      const payout = Math.round(MINING_EXPECTED_WEEKLY_SATS * mult);
+      const weekFees = dailyFee * 7;
+      if (payout > 0) {
+        s.utxos = [...s.utxos, { id: nextId(), day: finishedDay, sats: payout, source: "Mining payout", kyc: false }];
+        s.btcOnchainSats = (s.btcOnchainSats ?? 0) + payout;
+        s.miningTotalMined = (s.miningTotalMined ?? 0) + payout;
+      }
+      pushLog(s, "⛏️", payout > 0
+        ? `Mining week: payout ${payout.toLocaleString()} sats (worth $${(payout / SATS_PER_USD).toFixed(0)}) against $${weekFees.toFixed(0)} of hosting fees. ${payout / SATS_PER_USD >= weekFees ? "Profitable week." : "Fees won this week."}`
+        : `Mining week: the rigs were down (hosting outage). $0 payout against $${weekFees.toFixed(0)} of hosting fees. That is mining volatility.`, "ln");
     }
   }
 
@@ -606,6 +871,13 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   const avgFactor = s.products.filter((p) => p.unlocked).reduce((n, p) => n + priceFactor(p), 0) / Math.max(1, s.products.filter((p) => p.unlocked).length);
   if (avgFactor < 0.75) rep -= 3;
   if (avgFactor >= 0.95) rep += 1;
+  // Loss leader buzz: people talk about the gum you are practically giving
+  // away. Up to +4 reputation a day from loss-leader volume.
+  const lossLeaderRep = Math.min(4, Math.floor(lossLeaderUnits / 20));
+  if (lossLeaderRep > 0) {
+    rep += lossLeaderRep;
+    pushLog(s, "🎁", `Loss leader buzz: ${lossLeaderUnits} gums sold at a loss bought you +${lossLeaderRep} reputation today.`, "info");
+  }
   s.reputation = Math.min(100, Math.max(5, rep));
 
   // Product unlocks
@@ -617,7 +889,7 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
   }
 
   s.lastDay = {
-    revenue, productCost, rent, marketing: s.marketingSpend, depreciation, cardFees, tax,
+    revenue, productCost, rent, marketing: marketingCost, depreciation, cardFees, tax,
     netProfit, satsEarned, unitsSold, unitsStockedOut: stockedOut, lnShare,
   };
   s.history = [...s.history, { day: finishedDay, revenue, netProfit, satsEarned, unitsSold }].slice(-60);
@@ -642,6 +914,38 @@ export const processDayEnd = (input: GameState, rand: () => number = Math.random
     if (s.negativeDays >= 3) s.gameOver = true;
   } else s.negativeDays = 0;
 
+  // KYC data-hack risk: exchanges leak. On a small share of days, holders
+  // of identity-linked UTXOs get targeted and lose a slice of those coins.
+  // P2P, ATM, swept and mined coins carry no such link.
+  const kycSats = (s.utxos ?? []).filter((u) => u.kyc).reduce((n, u) => n + u.sats, 0);
+  if (kycSats > 0 && rand() < 0.008) {
+    let loss = Math.round(kycSats * 0.15);
+    const lostTotal = loss;
+    s.utxos = (s.utxos ?? []).map((u) => {
+      if (!u.kyc || loss <= 0) return u;
+      const take = Math.min(u.sats, loss);
+      loss -= take;
+      return { ...u, sats: u.sats - take };
+    }).filter((u) => u.sats > 0);
+    s.btcOnchainSats = Math.max(0, (s.btcOnchainSats ?? 0) - lostTotal);
+    pushLog(s, "🕵️", `Exchange data hack fallout: your leaked KYC data was used to target you and ${lostTotal.toLocaleString()} sats of identity-linked bitcoin are gone. Coins bought without KYC were untouched. This is why people pay the P2P premium.`, "warn");
+  }
+
+  // Mempool fees drift daily: consolidation is cheap on quiet days.
+  s.btcFeeRate = Math.max(3, Math.min(90, Math.round((s.btcFeeRate ?? 12) * (0.7 + rand() * 0.7))));
+
+  // Milestone ladder: crossing a net-worth rung pays its reward at once,
+  // and the loop handles several rungs crossed on one very good day.
+  for (let guard = 0; guard < 12; guard++) {
+    const m = milestoneAt(s.milestonesClaimed ?? 0);
+    if (netWorth(s) < m.threshold) break;
+    s.milestonesClaimed = (s.milestonesClaimed ?? 0) + 1;
+    s.cash += m.cashReward;
+    s.sats += m.satsReward;
+    const next = milestoneAt(s.milestonesClaimed);
+    pushLog(s, m.emoji, `MILESTONE: ${m.title}! Net worth crossed $${m.threshold.toLocaleString()}. Reward paid: $${m.cashReward.toLocaleString()} cash + ${m.satsReward.toLocaleString()} sats. Next rung: ${next.title} at $${next.threshold.toLocaleString()}.`, "unlock");
+  }
+
   return unlockAchievements(s);
 };
 
@@ -657,9 +961,10 @@ export const forecastCosts = (s: GameState): CostBreakdown => {
   const rent = dailyRent(s);
   const depreciation = totalMachines(s) * s.machineValueEach * s.depreciationRate;
   const cardFees = (revenue - lnRevenue) * CARD_FEE_RATE;
-  const taxable = Math.max(0, revenue - productCost - rent - s.marketingSpend - depreciation - cardFees);
+  const marketingCost = dailyMarketingCost(s);
+  const taxable = Math.max(0, revenue - productCost - rent - marketingCost - depreciation - cardFees);
   const tax = taxable * s.taxRate;
-  return { revenue, productCost, rent, marketing: s.marketingSpend, depreciation, cardFees, tax, netProfit: revenue - productCost - rent - s.marketingSpend - depreciation - cardFees - tax };
+  return { revenue, productCost, rent, marketing: marketingCost, depreciation, cardFees, tax, netProfit: revenue - productCost - rent - marketingCost - depreciation - cardFees - tax };
 };
 
 export const formatCurrency = (amount: number): string =>
