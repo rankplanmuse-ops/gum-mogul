@@ -123,6 +123,7 @@ export interface GameState {
   utxos: Utxo[];
   btcFeeRate: number; // current mempool fee, sats per vByte, drifts daily
   miningOwned: boolean;
+  miningMachines: number; // rigs in the fleet (no cap)
   miningActive: boolean;
   miningTotalFees: number; // USD paid in service fees, all time
   miningTotalMined: number; // sats mined, all time

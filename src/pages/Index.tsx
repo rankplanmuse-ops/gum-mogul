@@ -47,6 +47,10 @@ const loadSave = (): GameState => {
         if (!Array.isArray(parsed.loans) && (parsed.bankLoan ?? 0) > 0) {
           merged.loans = [{ id: 1, tierId: parsed.bankLoanTier ?? "starter", name: "Bank Loan", emoji: "🏦", principal: parsed.bankLoan, owed: parsed.bankLoan, dayTaken: parsed.day ?? 1 }];
         }
+        // Old saves ran exactly one mining rig: migrate to the fleet count.
+        if (typeof parsed.miningMachines !== "number" && parsed.miningOwned) {
+          merged.miningMachines = 1;
+        }
         return merged;
       }
     }
