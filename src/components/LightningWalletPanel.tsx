@@ -73,7 +73,7 @@ export const LightningWalletPanel = ({ gameState, onReceive, onZapPromo, onSellS
 
         <div className="grid grid-cols-2 gap-2">
           <Button onClick={onZapPromo} disabled={!terminal || gameState.sats < ZAP_PROMO_COST_SATS} className="rounded-full font-black bg-fuchsia-500 hover:bg-fuchsia-600 gap-1">
-            <Megaphone className="h-4 w-4" /> Zap Promo ({ZAP_PROMO_COST_SATS.toLocaleString()})
+            <Megaphone className="h-4 w-4" /> Zap Promo +2 days ({ZAP_PROMO_COST_SATS.toLocaleString()})
           </Button>
           <Button variant="outline" onClick={() => onSellSats(10000)} disabled={gameState.sats < 10000} className="rounded-full font-black gap-1">
             <ArrowLeftRight className="h-4 w-4" /> Sell 10,000 sats

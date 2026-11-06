@@ -7,7 +7,7 @@ browser. Stock vending machines, bend demand with your prices, open new
 locations, survive random events, and stack sats through a built-in
 **Bitcoin Lightning Network** wallet simulation.
 
-**Goal:** reach **$25,000 net worth** and become the Gum Mogul.
+**Goal:** climb the milestone ladder, $2,500, $25,000, **$250,000 net worth** (Gum Tycoon), $2,500,000 and beyond. Every rung pays a cash and sats reward the moment your net worth crosses it.
 **Lose condition:** three days in a row with negative cash pops the bubble.
 
 ## What is in the game

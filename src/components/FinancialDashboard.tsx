@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { GameState } from "@/types/game";
-import { formatCurrency, formatSats, netWorth, MOGUL_NET_WORTH } from "@/lib/gameLogic";
+import { formatCurrency, formatSats, netWorth, nextMilestone, milestoneAt, currentRank } from "@/lib/gameLogic";
 import { Wallet, Zap, Crown, Heart, CalendarDays } from "lucide-react";
 
 interface Props {
@@ -11,7 +11,10 @@ interface Props {
 
 export const FinancialDashboard = ({ gameState, dailyProfit }: Props) => {
   const worth = netWorth(gameState);
-  const pct = Math.min(100, Math.max(0, (worth / MOGUL_NET_WORTH) * 100));
+  const next = nextMilestone(gameState);
+  const claimed = gameState.milestonesClaimed ?? 0;
+  const pct = Math.min(100, Math.max(0, (worth / next.threshold) * 100));
+  const ladder = Array.from({ length: Math.min(claimed + 2, 8) }, (_, i) => milestoneAt(i));
   const stats = [
     { label: "Cash", value: formatCurrency(gameState.cash), icon: Wallet, cls: gameState.cash < 0 ? "text-loss" : "text-foreground", bg: "bg-pink-100" },
     { label: "Sats Wallet", value: formatSats(gameState.sats), icon: Zap, cls: "text-amber-500", bg: "bg-amber-100" },
@@ -40,15 +43,23 @@ export const FinancialDashboard = ({ gameState, dailyProfit }: Props) => {
           <div className="flex items-center gap-3">
             <Crown className="h-8 w-8 animate-floaty" />
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-white/80">Road to Gum Mogul</p>
-              <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tight">Net worth {formatCurrency(worth)} <span className="text-white/70 text-base font-bold">of {formatCurrency(MOGUL_NET_WORTH)}</span></p>
+              <p className="text-xs font-bold uppercase tracking-widest text-white/80">Next milestone: {next.title} · your rank: {currentRank(gameState)}</p>
+              <p className="text-xl sm:text-2xl font-black tabular-nums tracking-tight">Net worth {formatCurrency(worth)} <span className="text-white/70 text-base font-bold">of {formatCurrency(next.threshold)}</span></p>
             </div>
           </div>
           <p className="text-sm font-bold bg-white/25 rounded-full px-3 py-1">
-            Forecast profit today: {formatCurrency(dailyProfit)} · Total revenue {formatCurrency(gameState.totalRevenue)}
+            Reward at {formatCurrency(next.threshold)}: {formatCurrency(next.cashReward)} + {next.satsReward.toLocaleString()} sats · Forecast profit today: {formatCurrency(dailyProfit)}
           </p>
         </div>
         <Progress value={pct} className="mt-3 h-4 bg-white/30 [&>div]:bg-white" />
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {ladder.map((m, i) => (
+            <span key={m.threshold} className={`text-[11px] font-black rounded-full px-2.5 py-1 ${i < claimed ? "bg-white text-pink-600" : i === claimed ? "bg-black/25 text-white ring-2 ring-white" : "bg-white/20 text-white/70"}`}>
+              {i < claimed ? "✅" : m.emoji} {m.title} {formatCurrency(m.threshold)}
+            </span>
+          ))}
+          <span className="text-[11px] font-black rounded-full px-2.5 py-1 bg-white/20 text-white/70">… x10 forever</span>
+        </div>
       </Card>
     </div>
   );

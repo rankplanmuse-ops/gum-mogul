@@ -78,8 +78,21 @@ export const ProductInventory = ({ gameState, onPurchase, onPriceChange }: Props
                     {formatCurrency(p.sellPrice)} {p.sellPrice > p.refPrice * 1.3 ? "(pricey!)" : p.sellPrice < p.refPrice ? "(deal!)" : "(sweet spot)"}
                   </span>
                 </div>
-                <Slider value={[p.sellPrice]} min={Math.max(step, p.costPrice * 1.1)} max={p.refPrice * 2.5} step={step}
+                <Slider value={[p.sellPrice]} min={Math.max(0.05, p.costPrice * 0.5)} max={p.refPrice * 2.5} step={step}
                   onValueChange={([v]) => onPriceChange(p.id, Math.round(v * 100) / 100)} className="mt-2" />
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => onPriceChange(p.id, Math.round(p.costPrice * 1.15 * 100) / 100)} className="flex-1 rounded-full border-2 border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] font-black text-amber-800 transition-transform hover:-translate-y-0.5" title="Slim 15% margin over cost: cheap enough to move serious volume">
+                    🔥 Super Deal (cost +15%)
+                  </button>
+                  <button onClick={() => onPriceChange(p.id, Math.round(p.costPrice * 0.9 * 100) / 100)} className="flex-1 rounded-full border-2 border-rose-300 bg-rose-50 px-2 py-1.5 text-[11px] font-black text-rose-800 transition-transform hover:-translate-y-0.5" title="Sell 10% under cost: every unit loses a little money and buys reputation and foot traffic">
+                    🎁 Loss Leader (cost -10%)
+                  </button>
+                </div>
+                {p.sellPrice <= p.costPrice ? (
+                  <p className="text-xs font-black text-rose-600 mt-1.5">🎁 LOSS LEADER: losing {formatCurrency(p.costPrice - p.sellPrice)}/unit on purpose. Volume buys reputation (up to +4/day) and pulls crowds past your other gums.</p>
+                ) : margin / p.sellPrice <= 0.2 ? (
+                  <p className="text-xs font-black text-amber-600 mt-1.5">🔥 SUPER DEAL: slim {Math.round((margin / p.sellPrice) * 100)}% margin, priced to fly. Volume is the profit.</p>
+                ) : null}
                 <p className="text-xs font-semibold text-muted-foreground mt-1">Forecast: ~{forecast} sold/day {low && <span className="text-loss font-black">· stock below forecast!</span>}</p>
               </div>
 

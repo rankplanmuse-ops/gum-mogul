@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { GameState } from "@/types/game";
-import { formatCurrency, MACHINE_COST, CITIES, machineCapOf, dailyRent, totalMachines, RESTOCK_LEVELS, hasUpgrade, MARKETING_CHANNELS } from "@/lib/gameLogic";
+import { formatCurrency, MACHINE_COST, CITIES, machineCapOf, dailyRent, totalMachines, RESTOCK_LEVELS, hasUpgrade, MARKETING_CHANNELS, ONGOING_MARKETING, ongoingDailyCost } from "@/lib/gameLogic";
 import { Lock, Plus, Sparkles, Megaphone } from "lucide-react";
 
 interface Props {
@@ -13,9 +13,10 @@ interface Props {
   onMarketingChange: (spend: number) => void;
   onRestockLevelChange: (levelId: string) => void;
   onBuyMarketing: (channelId: string) => void;
+  onToggleOngoing: (activityId: string) => void;
 }
 
-export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUpgrade, onMarketingChange, onRestockLevelChange, onBuyMarketing }: Props) => {
+export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUpgrade, onMarketingChange, onRestockLevelChange, onBuyMarketing, onToggleOngoing }: Props) => {
   return (
     <div className="space-y-6">
       <div>
@@ -80,6 +81,29 @@ export const EmpirePanel = ({ gameState, onBuyMachine, onUnlockLocation, onBuyUp
                       ) : (
                         <Button onClick={() => onBuyMarketing(c.id)} disabled={gameState.cash < c.cost} className="w-full rounded-full font-black mt-2 h-9">
                           Launch {formatCurrency(c.cost)}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="border-t-2 border-dashed border-fuchsia-200 mt-4 pt-3">
+              <p className="text-sm font-black">🔁 Always-on marketing <span className="text-xs font-bold text-muted-foreground">(runs every day until you stop it, billed daily{ongoingDailyCost(gameState) > 0 ? ` · currently $${ongoingDailyCost(gameState)}/day` : ""})</span></p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 mt-2">
+                {ONGOING_MARKETING.map((a) => {
+                  const running = (gameState.ongoingMarketing ?? []).includes(a.id);
+                  const locked = !running && gameState.totalRevenue < a.requiresRevenue;
+                  return (
+                    <div key={a.id} className={`rounded-2xl border-2 p-3 ${running ? "bg-emerald-50 border-emerald-300" : "bg-white/70"}`}>
+                      <p className="font-black text-sm">{a.emoji} {a.name}</p>
+                      <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">{a.blurb}</p>
+                      <p className="text-[11px] font-black text-fuchsia-700 mt-1">+{Math.round((a.factor - 1) * 100)}% demand · ${a.dailyCost}/day</p>
+                      {locked ? (
+                        <p className="text-[11px] font-black text-amber-600 mt-2">🔒 Unlocks at ${a.requiresRevenue.toLocaleString()} lifetime revenue</p>
+                      ) : (
+                        <Button onClick={() => onToggleOngoing(a.id)} variant={running ? "destructive" : "default"} className="w-full rounded-full font-black mt-2 h-9">
+                          {running ? "Stop activity" : `Start · $${a.dailyCost}/day`}
                         </Button>
                       )}
                     </div>

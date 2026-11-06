@@ -5,13 +5,15 @@ import { ProductInventory } from "@/components/ProductInventory";
 import { BankPanel } from "@/components/BankPanel";
 import { CostBreakdownPanel } from "@/components/CostBreakdownPanel";
 import { LightningWalletPanel } from "@/components/LightningWalletPanel";
+import { BitcoinWalletPanel } from "@/components/BitcoinWalletPanel";
 import { EmpirePanel } from "@/components/EmpirePanel";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { Button } from "@/components/ui/button";
 import { GameState } from "@/types/game";
 import {
   freshState, processDayEnd, purchaseStock, buyMachine, unlockLocation, buyUpgrade,
-  zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock, refillLines, refillJars, buyMarketing, takeLoan, repayLoan,
+  zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock, refillLines, refillJars, buyMarketing, toggleOngoingMarketing, takeLoan, repayLoan,
+  buyBtc, sweepLightningToChain, consolidateUtxos, buyMiningRig, toggleMining,
   stockCapacity, totalMachines, hasUpgrade, SAVE_KEY, ActionResult,
 } from "@/lib/gameLogic";
 import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX, Home, Candy, Castle, Zap, Landmark } from "lucide-react";
@@ -39,6 +41,10 @@ const loadSave = (): GameState => {
             const saved = parsed.upgrades.find((u: { id: string }) => u.id === fresh.id);
             return saved ? { ...fresh, owned: !!saved.owned } : fresh;
           });
+        }
+        // Old saves held a single bank loan: migrate it into the loans list.
+        if (!Array.isArray(parsed.loans) && (parsed.bankLoan ?? 0) > 0) {
+          merged.loans = [{ id: 1, tierId: parsed.bankLoanTier ?? "starter", name: "Bank Loan", emoji: "🏦", principal: parsed.bankLoan, owed: parsed.bankLoan, dayTaken: parsed.day ?? 1 }];
         }
         return merged;
       }
@@ -212,7 +218,7 @@ const Index = () => {
           <h1 className="text-5xl sm:text-6xl font-black tracking-tight bg-gradient-to-r from-pink-600 via-fuchsia-500 to-amber-500 bg-clip-text text-transparent drop-shadow-sm">
             Gum Mogul
           </h1>
-          <p className="text-base sm:text-lg font-bold text-muted-foreground">Build a bubblegum empire, one machine, one zap at a time. Reach $25,000 net worth and take the crown 👑</p>
+          <p className="text-base sm:text-lg font-bold text-muted-foreground">Build a bubblegum empire, one machine, one zap at a time. Climb the milestone ladder: $2.5k, $25k, $250k, $2.5M, each rung pays a reward 👑</p>
           <button onClick={() => setShowHelp(!showHelp)} className="inline-flex items-center gap-1 font-black text-primary underline underline-offset-4">
             {showHelp ? <X className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />} How to play
           </button>
@@ -231,7 +237,7 @@ const Index = () => {
 
         {gameState.mogulReached && (
           <div className="text-center bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-300 rounded-full py-3 px-6 font-black text-amber-900 text-lg shadow-lg animate-pop">
-            👑 YOU ARE THE GUM MOGUL. $25,000 net worth reached. Sandbox mode now: how big can it get?
+            👑 HEADLINE GOAL SMASHED: $250,000 net worth. You are the Gum Tycoon, and the ladder keeps climbing: $2.5M is next. How big can it get?
           </div>
         )}
 
@@ -284,6 +290,7 @@ const Index = () => {
           onMarketingChange={(spend) => setGameState((s) => ({ ...s, marketingSpend: spend }))}
           onRestockLevelChange={(levelId) => { setGameState((s) => ({ ...s, restockLevel: levelId })); toast.success(`Restock Bot set to ${levelId}`); }}
           onBuyMarketing={(channelId) => apply(buyMarketing(gameState, channelId))}
+          onToggleOngoing={(activityId) => apply(toggleOngoingMarketing(gameState, activityId))}
         />
         </div>
 
@@ -295,6 +302,14 @@ const Index = () => {
             onSellSats={(amount) => apply(sellSats(gameState, amount))}
             onRescueLoan={() => apply(takeRescueLoan(gameState))}
           />
+          <BitcoinWalletPanel
+            gameState={gameState}
+            onBuyBtc={(routeId, usd) => apply(buyBtc(gameState, routeId, usd))}
+            onSweep={(amount) => apply(sweepLightningToChain(gameState, amount))}
+            onConsolidate={() => apply(consolidateUtxos(gameState))}
+            onBuyMining={() => apply(buyMiningRig(gameState))}
+            onToggleMining={() => apply(toggleMining(gameState))}
+          />
         </div>
 
         <InsightsPanel gameState={gameState} />
@@ -303,7 +318,7 @@ const Index = () => {
           <BankPanel
             gameState={gameState}
             onTakeLoan={(tierId) => apply(takeLoan(gameState, tierId))}
-            onRepay={(amount) => apply(repayLoan(gameState, amount))}
+            onRepay={(amount, loanId) => apply(repayLoan(gameState, amount, loanId))}
           />
         </div>
 
