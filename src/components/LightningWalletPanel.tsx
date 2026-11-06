@@ -67,7 +67,7 @@ export const LightningWalletPanel = ({ gameState, onReceive, onZapPromo, onSellS
       <div className="p-5 space-y-5">
         {!terminal && (
           <div className="rounded-2xl bg-amber-50 border-2 border-amber-200 p-4 text-sm font-semibold">
-            🔌 Your machines only take cards right now (2.9% fee on every sale). Buy the <strong>Lightning Terminal upgrade ($150)</strong> in the Empire section and 45% of customers start paying in sats: instant settlement, zero card fee.
+            🔌 Your machines only take cards right now (2.9% fee on every sale). Buy the <strong>Lightning Terminal upgrade ($150)</strong> in the Empire section and 25% of customers start paying in sats: instant settlement, zero card fee.
           </div>
         )}
 

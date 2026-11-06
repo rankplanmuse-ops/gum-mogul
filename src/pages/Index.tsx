@@ -14,7 +14,7 @@ import {
   freshState, processDayEnd, purchaseStock, buyMachine, unlockLocation, buyUpgrade,
   zapPromo, takeRescueLoan, sellSats, receiveSats, forecastCosts, totalStock, refillLines, refillJars, buyMarketing, toggleOngoingMarketing, takeLoan, repayLoan,
   buyBtc, sweepLightningToChain, consolidateUtxos, buyMiningRig, toggleMining,
-  stockCapacity, totalMachines, hasUpgrade, SAVE_KEY, ActionResult,
+  stockCapacity, totalMachines, hasUpgrade, SAVE_KEY, ActionResult, LN_CUSTOMER_SHARE,
 } from "@/lib/gameLogic";
 import { Play, FastForward, RotateCcw, HelpCircle, X, Volume2, VolumeX, Home, Candy, Castle, Zap, Landmark, Cog } from "lucide-react";
 import { chiptune, MUSIC_PREF_KEY } from "@/lib/music";
@@ -300,7 +300,7 @@ const Index = () => {
                 🧃 Refill jars{refillUnits > 0 ? `: ${refillUnits} gums for $${refillCost.toFixed(2)}` : " (already at forecast)"}
               </Button>
             </div>
-            <CostBreakdownPanel costs={breakdownCosts} title={gameState.lastDay ? `Yesterday (Day ${gameState.day - 1}) in numbers` : "Today, forecast"} lnShare={gameState.lastDay ? gameState.lastDay.lnShare : hasUpgrade(gameState, "ln-terminal") ? 0.45 : 0} />
+            <CostBreakdownPanel costs={breakdownCosts} title={gameState.lastDay ? `Yesterday (Day ${gameState.day - 1}) in numbers` : "Today, forecast"} lnShare={gameState.lastDay ? gameState.lastDay.lnShare : hasUpgrade(gameState, "ln-terminal") ? LN_CUSTOMER_SHARE : 0} />
           </div>
           <div id="gums" className="scroll-mt-3">
             <ProductInventory

@@ -47,7 +47,7 @@ export const nextMilestone = (s: GameState): Milestone => milestoneAt(s.mileston
 export const currentRank = (s: GameState): string =>
   (s.milestonesClaimed ?? 0) > 0 ? milestoneAt((s.milestonesClaimed ?? 1) - 1).title : "Rookie";
 export const CARD_FEE_RATE = 0.029; // what card sales cost you
-export const LN_CUSTOMER_SHARE = 0.45; // share of sales paid over Lightning once you own a terminal
+export const LN_CUSTOMER_SHARE = 0.25; // share of sales paid over Lightning once you own a terminal (capped at 25%)
 export const LN_SUPPLIER_DISCOUNT = 0.08; // paying suppliers over Lightning is 8% cheaper
 export interface RestockLevel {
   id: string;
@@ -250,7 +250,7 @@ export const INITIAL_LOCATIONS: Location[] = [
 export const machineCapOf = (loc: Location): number => loc.machineCap ?? MAX_MACHINES_PER_LOCATION;
 
 export const INITIAL_UPGRADES: Upgrade[] = [
-  { id: "ln-terminal", name: "Lightning Terminal", emoji: "⚡", blurb: "Accept Lightning in every machine. 45% of customers pay in sats: instant, no 2.9% card fee. Unlocks Lightning supplier payments, zap promos and rescue loans.", cost: 150, owned: false },
+  { id: "ln-terminal", name: "Lightning Terminal", emoji: "⚡", blurb: "Accept Lightning in every machine. 25% of customers pay in sats: instant, no 2.9% card fee. Unlocks Lightning supplier payments, zap promos and rescue loans.", cost: 150, owned: false },
   { id: "big-jar", name: "Big Jar", emoji: "🫙", blurb: "+60% stock capacity in every machine.", cost: 120, owned: false },
   { id: "xl-jars", name: "Extra Large Jars", emoji: "🏺", blurb: "Cavernous jars: x2.5 stock capacity in every machine. Stacks with Big Jar (x4 total). Built for Max Out bots and kiosk life.", cost: 600, owned: false },
   { id: "neon", name: "Neon Sign", emoji: "💡", blurb: "+15% demand everywhere, forever. Very bubbly.", cost: 200, owned: false },
