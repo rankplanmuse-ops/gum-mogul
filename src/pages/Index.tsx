@@ -138,6 +138,11 @@ const Index = () => {
     if (!isAutoPlaying) return;
     const t = setInterval(() => {
       if (stateRef.current.gameOver) { setIsAutoPlaying(false); return; }
+      if (stateRef.current.cash < 0) {
+        setIsAutoPlaying(false);
+        toast.error("Auto Play stopped: you are in the red. Fix your cash before the 3-day bankruptcy clock runs out.", { duration: 5000 });
+        return;
+      }
       setGameState((s) => processDayEnd(s));
     }, 1500);
     return () => clearInterval(t);
