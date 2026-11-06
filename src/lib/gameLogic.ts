@@ -257,6 +257,8 @@ export const INITIAL_UPGRADES: Upgrade[] = [
   { id: "ln-terminal", name: "Lightning Terminal", emoji: "⚡", blurb: "Accept Lightning in every machine. 25% of customers pay in sats: instant, no 2.9% card fee. Unlocks Lightning supplier payments, zap promos and rescue loans.", cost: 150, owned: false },
   { id: "big-jar", name: "Big Jar", emoji: "🫙", blurb: "+60% stock capacity in every machine.", cost: 120, owned: false },
   { id: "xl-jars", name: "Extra Large Jars", emoji: "🏺", blurb: "Cavernous jars: x2.5 stock capacity in every machine. Stacks with Big Jar (x4 total). Built for Max Out bots and kiosk life.", cost: 600, owned: false },
+  { id: "jumbo-jars", name: "Jumbo Jars", emoji: "🪣", blurb: "Bucket-sized jars: x2 stock capacity in every machine. Stacks with Big Jar and Extra Large (x8 total). For empires that sell out by lunch.", cost: 2500, owned: false },
+  { id: "gum-silos", name: "Gum Silos", emoji: "🏭", blurb: "Industrial silo storage plumbed into every machine: x2.5 stock capacity. Stacks with every jar upgrade (x20 total). The endgame warehouse.", cost: 12000, owned: false },
   { id: "neon", name: "Neon Sign", emoji: "💡", blurb: "+15% demand everywhere, forever. Very bubbly.", cost: 200, owned: false },
   { id: "displays", name: "Digital Displays", emoji: "📺", blurb: "Animated screens on every machine loop your flavours in glorious 8-bit, with a live price ticker. +12% demand everywhere.", cost: 500, owned: false },
   { id: "auto-restock", name: "Restock Bot", emoji: "🤖", blurb: "Every morning the bot restocks for you. Four fill levels: Lean, Standard, Loaded, Max Out. Set it and let Auto Play run.", cost: 350, owned: false },
@@ -371,7 +373,7 @@ export const dailyRent = (s: GameState) =>
   s.locations.reduce((n, l) => n + l.machines * l.rentPerMachine, 0);
 
 export const stockCapacity = (s: GameState) =>
-  Math.round(totalMachines(s) * 150 * (hasUpgrade(s, "big-jar") ? 1.6 : 1) * (hasUpgrade(s, "xl-jars") ? 2.5 : 1));
+  Math.round(totalMachines(s) * 150 * (hasUpgrade(s, "big-jar") ? 1.6 : 1) * (hasUpgrade(s, "xl-jars") ? 2.5 : 1) * (hasUpgrade(s, "jumbo-jars") ? 2 : 1) * (hasUpgrade(s, "gum-silos") ? 2.5 : 1));
 
 export const totalStock = (s: GameState) =>
   s.products.reduce((n, p) => n + p.stock, 0);

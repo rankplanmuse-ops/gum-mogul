@@ -7,7 +7,7 @@ import { Lock, Plus, Sparkles, Megaphone } from "lucide-react";
 
 const UPGRADE_GROUPS: { name: string; ids: string[] }[] = [
   { name: "📣 Sell more", ids: ["neon", "displays"] },
-  { name: "🫙 Bigger jars", ids: ["big-jar", "xl-jars"] },
+  { name: "🫙 Bigger jars & storage", ids: ["big-jar", "xl-jars", "jumbo-jars", "gum-silos"] },
   { name: "🤖 Automation & buying", ids: ["auto-restock", "buyer-bot"] },
   { name: "⚡ Bitcoin", ids: ["ln-terminal"] },
 ];
