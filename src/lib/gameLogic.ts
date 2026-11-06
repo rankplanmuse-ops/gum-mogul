@@ -590,7 +590,7 @@ export const BTC_ROUTES: BtcRoute[] = [
 
 export const MINING_EQUIPMENT_COST = 7500;
 export const MINING_MONTHLY_FEE = 1500;
-export const MINING_REQUIRES_REVENUE = 5000;
+export const MINING_REQUIRES_REVENUE = 50000;
 export const MINING_EXPECTED_WEEKLY_SATS = 385000; // about $385/week at game rate, before variance
 
 const addUtxo = (s: GameState, sats: number, source: string, kyc: boolean) => {
